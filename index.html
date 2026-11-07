@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#20392f">
+  <meta name="description" content="Guarda recetas desde vídeos y crea versiones fitness adaptadas a tus objetivos.">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <title>RecetaFit GRATIS · Tu recetario fitness</title>
+  <link rel="icon" href="./icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="./icon-192.png">
+  <link rel="manifest" href="./manifest.webmanifest">
+  <link rel="stylesheet" href="./styles.css">
+  <script src="./offline-core.js" defer></script>
+  <script src="./gemini-free.js" defer></script>
+  <script src="./app.js" defer></script>
+</head>
+<body>
+<div class="app-shell">
+  <aside class="sidebar">
+    <a href="#" class="logo" data-nav="home" aria-label="Inicio de RecetaFit">
+      <span class="logo-symbol">R<span class="logo-spark">✳</span></span>
+      <span>receta<span>fit</span><small>COCINA INTELIGENTE</small></span>
+    </a>
+    <div class="sidebar-section">TU ESPACIO</div>
+    <nav class="side-nav" aria-label="Secciones">
+      <button class="nav-link active" data-nav="home"><span data-icon="layout-grid"></span> Mis recetas <span class="nav-count" id="sideCount">0</span></button>
+      <button class="nav-link" data-nav="add"><span data-icon="plus-circle"></span> Añadir receta</button>
+      <button class="nav-link" data-nav="shop"><span data-icon="shopping-bag"></span> Lista de compra <span class="nav-count" id="sideShopCount">0</span></button>
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="sidebar-tip"><span class="tip-flower">✳</span><div><strong>Come como te gusta.</strong><p>Adapta tus platos favoritos a tus objetivos sin perder su esencia.</p></div></div>
+      <button class="nav-link" data-nav="settings"><span data-icon="settings"></span> Ajustes y copias</button>
+      <div class="version">RECETAFIT · GRATIS 3.0</div>
+    </div>
+  </aside>
+
+  <div class="content-shell">
+    <header class="topbar"><span id="topTitle">Mi cocina</span><div class="topbar-right"><span class="status-dot" id="aiDot"></span><span id="aiStatus" class="status-text">Comprobando IA…</span><button class="avatar" data-nav="settings" title="Configuración">RF</button></div></header>
+    <main id="mainContent">
+      <section class="page" id="homeView">
+        <div class="welcome"><div class="eyebrow"><span class="tiny-star">✳</span> TU RECETARIO PERSONAL</div><h1>Todo lo que te gusta cocinar.<br><em>Ahora, a tu manera.</em></h1><p>Extrae recetas con Gemini gratis desde YouTube, vídeos o texto, crea versiones fitness y organiza la compra. Tu recetario funciona sin conexión.</p><div class="welcome-actions"><button class="btn primary" data-nav="add"><span data-icon="plus"></span> Añadir receta</button><button class="btn ghost" id="howItWorks">Cómo funciona <span data-icon="arrow-up-right"></span></button></div><div class="hero-decor decor-one"></div><div class="hero-decor decor-two"></div><div class="hero-decor decor-three"></div></div>
+        <div class="section-head"><div><div class="eyebrow muted">TU COLECCIÓN</div><h2>Mis recetas <span class="soft-count" id="recipeCount">0</span></h2></div><div class="search-wrap"><span data-icon="search"></span><input id="recipeSearch" type="search" placeholder="Buscar recetas o ingredientes…" aria-label="Buscar recetas"></div></div>
+        <div class="recipe-grid" id="recipeGrid"></div>
+        <div class="bottom-info"><span data-icon="shield-check"></span> Las recetas se guardan en este navegador. Haz copias desde <button data-nav="settings" class="link-button">Ajustes</button>.</div>
+      </section>
+
+      <section class="page" id="addView" hidden>
+        <div class="page-intro"><div class="eyebrow">AÑADIR A TU RECETARIO</div><h1>Tu receta,<br><em>siempre a mano.</em></h1><p>Añade un vídeo o enlace público y la IA intentará identificar ingredientes, cantidades y elaboración. También puedes pegar texto.</p></div>
+        <div class="form-card"><div class="source-tabs" role="tablist" aria-label="Origen de la receta"><button class="source-tab active" data-source="url"><span data-icon="link"></span> Enlace</button><button class="source-tab" data-source="video"><span data-icon="video"></span> Archivo</button><button class="source-tab" data-source="text"><span data-icon="align-left"></span> Texto</button></div>
+          <form id="addForm">
+            <div class="source-panel" data-panel="url"><label for="urlInput">Enlace del vídeo</label><div class="big-input"><span data-icon="link"></span><input type="url" id="urlInput" placeholder="https://www.instagram.com/reel/…" spellcheck="false"></div><p class="field-help">YouTube público: análisis directo de audio y vídeo con Gemini. Instagram/TikTok: sube el archivo desde Fotos o pega la descripción (no se analizan automáticamente desde el enlace).</p><label for="urlRecipeText" class="attached-label">Texto o descripción adicional (opcional)</label><textarea id="urlRecipeText" rows="9" placeholder="Ensalada de pollo&#10;Ingredientes&#10;- 200 g de pollo&#10;- 100 g de lechuga&#10;Preparación&#10;1. Cocina el pollo.&#10;2. Mezcla con la lechuga."></textarea></div>
+            <div class="source-panel" data-panel="video" hidden><label for="videoInput">Selecciona un vídeo de referencia</label><label class="dropzone" for="videoInput"><span class="drop-icon" data-icon="upload-cloud"></span><strong>Elige un vídeo</strong><span>Gemini intenta analizar audio y vídeo. Archivos grandes requieren una subida a Google y pueden tardar más.</span><span id="fileName" class="chosen-file">Ningún archivo seleccionado</span></label><input id="videoInput" name="video" type="file" accept="video/mp4,video/quicktime,video/webm,video/x-matroska,.m4v" class="visually-hidden"><label for="videoRecipeText" class="attached-label">Texto o transcripción del audio (opcional)</label><textarea id="videoRecipeText" rows="9" placeholder="Título de la receta&#10;Ingredientes&#10;- 2 huevos&#10;Preparación&#10;1. Bate los huevos."></textarea></div>
+            <div class="source-panel" data-panel="text" hidden><label for="textInput">Pega ingredientes y preparación</label><textarea id="textInput" rows="12" placeholder="Pasta con pollo&#10;Ingredientes&#10;- 200 g de pasta&#10;- 250 g de pollo&#10;Preparación&#10;1. Cuece la pasta.&#10;2. Cocina el pollo y mezcla."></textarea><p class="field-help">Incluye título y apartados «Ingredientes» y «Preparación». Funciona sin conexión.</p></div>
+            <div class="form-bottom"><div class="security-note"><span data-icon="lock-keyhole"></span><span id="formHint">IA gratuita de Gemini. Configura tu clave gratis de Google en Ajustes.</span></div><button type="submit" id="extractButton" class="btn primary"><span data-icon="sparkles"></span> Analizar y guardar</button></div>
+          </form>
+        </div>
+        <div class="steps-explainer"><div class="explainer-item"><span class="step-num">01</span><strong>Importa</strong><p>Comparte un enlace, adjunta un vídeo o pega un texto.</p></div><div class="explainer-item"><span class="step-num">02</span><strong>Organiza</strong><p>La IA prepara ingredientes, cantidades y pasos.</p></div><div class="explainer-item"><span class="step-num">03</span><strong>Transforma</strong><p>Crea una versión más proteica, ligera o equilibrada.</p></div></div>
+      </section>
+
+      <section class="page" id="shopView" hidden>
+        <div class="page-intro"><div class="eyebrow">COMPRA SIN OLVIDOS</div><h1>Tu lista,<br><em>todo organizado.</em></h1><p>Elige recetas para añadir sus ingredientes. Puedes marcar lo que ya tengas.</p></div>
+        <div class="shop-layout"><div class="shop-card"><div class="card-heading"><div><h2>Ingredientes <span id="shoppingCount" class="soft-count">0</span></h2><p>Se suman cantidades de ingredientes iguales.</p></div><button class="btn small outline" id="copyShopping"><span data-icon="copy"></span> Copiar lista</button></div><div id="shoppingList"></div></div><div class="shop-side"><div class="side-help"><span data-icon="lightbulb"></span><h3>¿Cómo añado recetas?</h3><p>Abre una receta de tu colección, selecciona la versión original o fitness y pulsa «Añadir a la compra».</p><button class="btn outline" data-nav="home">Ver mis recetas</button></div><div class="included-box"><h3>Recetas incluidas</h3><div id="shoppingRecipes"></div><button class="text-danger" id="clearShopping">Vaciar lista de compra</button></div></div></div>
+      </section>
+
+      <section class="page" id="settingsView" hidden>
+        <div class="page-intro"><div class="eyebrow">CONTROL Y PRIVACIDAD</div><h1>Tu cocina,<br><em>tus datos.</em></h1><p>Los datos se guardan localmente en tu iPhone. Exporta una copia periódicamente.</p></div>
+        <div class="settings-grid">
+          <div class="settings-card span-2"><div class="setting-icon"><span data-icon="sparkles"></span></div><h2>Gemini gratis</h2>
+ <p>RecetaFit utiliza <strong>Gemini 2.5 Flash, en su nivel gratuito</strong>. No necesitas OpenAI, Vercel ni pagar una suscripción. Para utilizar la IA, crea una clave gratuita de Google AI Studio en un proyecto <strong>sin facturación activada</strong>.</p>
+ <p><a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Crear clave de Gemini en Google AI Studio ↗</a></p>
+ <label for="aiPin">Clave gratuita de Google AI Studio</label>
+ <input id="aiPin" type="password" autocomplete="off" autocapitalize="none" spellcheck="false" placeholder="Pega aquí tu clave de Gemini" style="width:100%;border:1px solid #cfd7cd;border-radius:10px;padding:12px;margin:9px 0;">
+ <p id="pinStatus" class="field-help">No hay clave configurada</p>
+ <div class="setting-actions"><button id="savePin" class="btn primary">Comprobar y activar IA</button><button id="forgetPin" class="btn outline">Borrar clave</button></div>
+ <small>La clave solo se conserva durante esta sesión en tu dispositivo. Las llamadas van directamente del navegador a Google: no compartas esta app con una clave preintroducida. No la guardes en GitHub ni uses una cuenta con facturación habilitada. Google puede usar el contenido enviado a su nivel gratuito para mejorar sus servicios. Se aplican límites diarios y por minuto.</small></div>
+  <div class="settings-card"><div class="setting-icon"><span data-icon="smartphone"></span></div><h2>Aplicación para iPhone</h2><p>Instálala desde Safari tras publicarla gratis con HTTPS. El análisis con IA se envía directamente a Google.</p><div class="instruction"><strong>Para instalar</strong><p>Abre la dirección publicada en Safari, toca Compartir y elige «Añadir a pantalla de inicio».</p></div><small>El recetario funciona sin conexión tras la primera carga desde un alojamiento HTTPS. El archivo local HTML puede no conservar los datos de forma fiable en iOS.</small></div>
+  <div class="settings-card"><div class="setting-icon"><span data-icon="hard-drive-download"></span></div><h2>Copias de seguridad</h2><p>Las recetas se guardan localmente en este navegador. Exporta un archivo para recuperarlas si cambias de dispositivo.</p><div class="setting-actions"><button class="btn outline" id="exportRecipes"><span data-icon="download"></span> Exportar JSON</button><label class="btn outline upload-label" for="importFile"><span data-icon="upload"></span> Importar copia</label><input class="visually-hidden" type="file" id="importFile" accept="application/json,.json"></div></div>
+        
+  <div class="settings-card span-2"><div class="setting-icon"><span data-icon="shield-check"></span></div><h2>Privacidad y limitaciones</h2><p>Las recetas se almacenan en el navegador de este dispositivo, no se sincronizan entre móviles. Con la IA gratuita, los vídeos públicos de YouTube se envían a Gemini por su URL; los enlaces de Instagram y TikTok requieren archivo o descripción. Los vídeos cargados desde Fotos se envían a Google y las subidas grandes pueden fallar según navegador o cuota. Si el vídeo no muestra cantidades o pasos, la IA puede no identificarlos.</p><p>Con IA las variantes fitness se generan reformulando ingredientes y pasos. Las calorías y macros, si se muestran, son estimaciones orientativas, no un análisis nutricional verificado.</p></div>
+</div>
+      </section>
+    </main>
+  </div>
+</div>
+<nav class="mobile-nav" aria-label="Navegación móvil"><button data-nav="home" class="mob-link active"><span data-icon="layout-grid"></span> Recetas</button><button data-nav="add" class="mob-link"><span data-icon="plus-circle"></span> Añadir</button><button data-nav="shop" class="mob-link"><span data-icon="shopping-bag"></span> Compra</button><button data-nav="settings" class="mob-link"><span data-icon="settings"></span> Ajustes</button></nav>
+<div id="modalLayer" class="modal-layer" hidden><div class="modal-shade" data-close="modal"></div><div class="recipe-modal" role="dialog" aria-modal="true" aria-labelledby="detailTitle"><div id="modalContent"></div></div></div>
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+</body>
+</html>
