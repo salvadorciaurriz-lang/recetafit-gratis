@@ -202,7 +202,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.modalId)close
 if('serviceWorker' in navigator&&window.isSecureContext){
  let reloadedAfterUpdate=false;
  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloadedAfterUpdate&&navigator.onLine){reloadedAfterUpdate=true;window.location.reload();}});
- window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=3.3.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=3.4.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
 }}
 init();
 })();
