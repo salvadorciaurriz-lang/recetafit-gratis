@@ -1,7 +1,7 @@
 /* Offline parser and conservative fitness substitutions — no network, no inferred nutrition. */
 (function (root) {
   'use strict';
-  const GOALS = {proteina:'Alta en proteína', ligera:'Menos calorías', equilibrada:'Equilibrada'};
+  const GOALS = {proteina:'Alta en proteína', ligera:'Baja en kcal', baja_carbos:'Baja en hidratos', baja_grasas:'Baja en grasas', fibra:'Alta en fibra', equilibrada:'Equilibrada'};
   const EMPTY_NUTRITION = {calories:null,protein:null,carbs:null,fat:null};
   function parse(text) {
     text=String(text||'').trim();
@@ -61,7 +61,10 @@
     const extra={
       proteina:'Valora añadir o aumentar una fuente de proteína magra (pollo, pescado, huevos, tofu o legumbres) según la receta.',
       ligera:'Controla las grasas añadidas y prioriza plancha, horno o freidora de aire cuando se adapte a la preparación.',
-      equilibrada:'Acompaña el plato con verduras y ajusta las raciones a tu actividad y apetito.'
+      equilibrada:'Acompaña el plato con verduras y ajusta las raciones a tu actividad y apetito.',
+      baja_carbos:'Prueba a reducir la guarnición de pasta o arroz y añadir verduras, manteniendo la proteína.',
+      baja_grasas:'Reduce aceite y grasas añadidas, usando plancha, vapor u horno cuando sea adecuado.',
+      fibra:'Introduce verduras, legumbres o cereales integrales compatibles con el plato y aumenta la fibra progresivamente.'
     };
     version.changes.push(extra[goal]);
     version.notes=['Versión orientativa sin IA ni cálculo de macronutrientes.', 'Las sustituciones pueden requerir cambios de textura, tiempo y cantidad.'];
