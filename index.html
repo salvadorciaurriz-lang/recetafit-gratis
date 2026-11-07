@@ -8,19 +8,19 @@
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <title>RecetaFit GRATIS · Tu recetario fitness</title>
-  <link rel="icon" href="./icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="./icon.svg">
-  <link rel="manifest" href="./manifest.webmanifest?v=3.3.0">
-  <link rel="stylesheet" href="./styles.css?v=3.3.0">
-  <script src="./offline-core.js?v=3.3.0" defer></script>
-  <script src="./gemini-free.js?v=3.3.0" defer></script>
-  <script src="./app.js?v=3.3.0" defer></script>
+  <link rel="icon" href="./icon-192.png?v=3.4.0" type="image/png">
+  <link rel="apple-touch-icon" sizes="192x192" href="./icon-192.png?v=3.4.0">
+  <link rel="manifest" href="./manifest.webmanifest?v=3.4.0">
+  <link rel="stylesheet" href="./styles.css?v=3.4.0">
+  <script src="./offline-core.js?v=3.4.0" defer></script>
+  <script src="./gemini-free.js?v=3.4.0" defer></script>
+  <script src="./app.js?v=3.4.0" defer></script>
 </head>
 <body>
 <div class="app-shell">
   <aside class="sidebar">
     <a href="#" class="logo" data-nav="home" aria-label="Inicio de RecetaFit">
-      <span class="logo-symbol">R<span class="logo-spark">✳</span></span>
+      <img class="logo-brand-icon" src="./icon-192.png?v=3.4.0" width="44" height="44" alt="">
       <span>receta<span>fit</span><small>COCINA INTELIGENTE</small></span>
     </a>
     <div class="sidebar-section">TU ESPACIO</div>
@@ -32,12 +32,12 @@
     <div class="sidebar-bottom">
       <div class="sidebar-tip"><span class="tip-flower">✳</span><div><strong>Come como te gusta.</strong><p>Adapta tus platos favoritos a tus objetivos sin perder su esencia.</p></div></div>
       <button class="nav-link" data-nav="settings"><span data-icon="settings"></span> Ajustes y copias</button>
-      <div class="version">RECETAFIT · GRATIS 3.0</div>
+      <div class="version">RECETAFIT · GRATIS 3.4.0</div>
     </div>
   </aside>
 
   <div class="content-shell">
-    <header class="topbar"><span id="topTitle">Mi cocina</span><div class="topbar-right"><span class="status-dot" id="aiDot"></span><span id="aiStatus" class="status-text">Comprobando IA…</span><button class="avatar" data-nav="settings" title="Configuración">RF</button></div></header>
+    <header class="topbar"><div class="topbar-brand"><img class="topbar-brand-icon" src="./icon-192.png?v=3.4.0" width="36" height="36" alt=""><span id="topTitle">Mi cocina</span></div><div class="topbar-right"><span class="status-dot" id="aiDot"></span><span id="aiStatus" class="status-text">Comprobando IA…</span><button class="avatar" data-nav="settings" title="Configuración">RF</button></div></header>
     <main id="mainContent">
       <section class="page" id="homeView">
         <div class="welcome"><div class="eyebrow"><span class="tiny-star">✳</span> TU RECETARIO PERSONAL</div><h1>Todo lo que te gusta cocinar.<br><em>Ahora, a tu manera.</em></h1><p>Extrae recetas con Gemini gratis desde YouTube, vídeos o texto, crea versiones fitness y organiza la compra. Tu recetario funciona sin conexión.</p><div class="welcome-actions"><button class="btn primary" data-nav="add"><span data-icon="plus"></span> Añadir receta</button><button class="btn ghost" id="howItWorks">Cómo funciona <span data-icon="arrow-up-right"></span></button></div><div class="hero-decor decor-one"></div><div class="hero-decor decor-two"></div><div class="hero-decor decor-three"></div></div>
@@ -67,7 +67,7 @@
       <section class="page" id="settingsView" hidden>
         <div class="page-intro"><div class="eyebrow">CONTROL Y PRIVACIDAD</div><h1>Tu cocina,<br><em>tus datos.</em></h1><p>Los datos se guardan localmente en tu iPhone. Exporta una copia periódicamente.</p></div>
         <div class="settings-grid">
-          <div class="settings-card span-2"><div class="setting-icon"><span data-icon="sparkles"></span></div><h2>Gemini gratis <small style="font-size:12px;font-weight:500;color:#708178">v3.3.0</small></h2>
+          <div class="settings-card span-2"><div class="setting-icon"><span data-icon="sparkles"></span></div><h2>Gemini gratis <small style="font-size:12px;font-weight:500;color:#708178">v3.4.0</small></h2>
  <p>RecetaFit utiliza <strong>Gemini Flash con cuota gratuita</strong>. No necesitas OpenAI, Vercel ni pagar una suscripción. Para utilizar la IA, crea una clave gratuita de Google AI Studio en un proyecto <strong>sin facturación activada</strong>.</p>
  <p><a href="https://aistudio.google.com/api-keys" target="_blank" rel="noopener noreferrer">Crear clave de Gemini en Google AI Studio ↗</a></p>
  <label for="aiPin">Clave gratuita de Google AI Studio</label>
