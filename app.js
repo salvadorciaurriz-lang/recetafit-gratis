@@ -3,7 +3,7 @@
 'use strict';
 const STORAGE='recetafit_recipes_v1', SHOP='recetafit_shop_v1', CHECKS='recetafit_shopping_checked_v1', API_KEY_STORAGE='recetafit_gemini_key_device_v1';
 const readSavedKey=()=>{try{return localStorage.getItem(API_KEY_STORAGE)||sessionStorage.getItem('recetafit_gemini_free_key')||''}catch{return ''}};
-const GOALS={proteina:'Alta en proteína',ligera:'Menos calorías',equilibrada:'Equilibrada'};
+const GOALS={proteina:'Alta en proteína',ligera:'Baja en kcal',baja_carbos:'Baja en hidratos',baja_grasas:'Baja en grasas',fibra:'Alta en fibra',equilibrada:'Equilibrada'};
 const ICONS={
 'layout-grid':'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
 'plus-circle':'<circle cx="12" cy="12" r="9"/><path d="M12 8v8m-4-4h8"/>','plus':'<path d="M12 5v14M5 12h14"/>','minus':'<path d="M5 12h14"/>',
@@ -50,16 +50,22 @@ function selectedVariant(r){return state.variant==='original'?r:r.fitness_varian
 function setVariant(key){state.variant=key;const r=getRecipe(state.modalId);if(!r)return;state.servings=selectedVariant(r).servings||2;renderModal()}
 function openModal(id){if(!getRecipe(id))return;state.modalId=id;state.variant='original';state.servings=getRecipe(id).servings||2;state.goal='proteina';document.getElementById('modalLayer').hidden=false;document.body.style.overflow='hidden';renderModal()}
 function closeModal(){state.modalId=null;document.getElementById('modalLayer').hidden=true;document.body.style.overflow=''}
-function renderModal(){const r=getRecipe(state.modalId);if(!r)return;const v=selectedVariant(r);const isFitness=state.variant!=='original';const variants=r.fitness_variants||{};const macros=v.nutrition||{};const macroList=[['calories','kcal'],['protein','proteína (g)'],['carbs','hidratos (g)'],['fat','grasas (g)']];
+function renderNutrition(recipe,portions,working){
+ const data=RecetaFitNutrition.summarize(recipe.nutrition||{},portions);
+ const labels=[['calories','kcal'],['protein','proteínas · g'],['carbs','hidratos · g'],['fat','grasas · g']];
+ const grid=values=>`<div class="macro-row">${labels.map(([key,label])=>`<div class="macro"><strong>${values[key]===null?'—':'~'+esc(RecetaFitNutrition.pretty(values[key],key))}</strong><small>${label}</small></div>`).join('')}</div>`;
+ return `<section class="nutrition-panel" aria-label="Información nutricional de esta receta"><div class="nutrition-head"><div><h3>Calorías y macronutrientes</h3><p>Estimaciones de la receta, no un registro diario.</p></div><button class="btn outline small" data-action="estimate-nutrition" ${working?'disabled':''}>${working?'<span class="loader"></span> Calculando…':icon('sparkles')+' '+(data.available?'Recalcular con IA':'Estimar con IA')}</button></div><div class="nutrition-section-label">Por ración</div>${grid(data.perServing)}<div class="nutrition-section-label">Receta completa · ${data.servings} raciones</div>${grid(data.whole)}<p class="nutrition-disclaimer">Valores orientativos calculados mediante IA; no sustituyen datos del fabricante ni análisis nutricionales. Las cantidades no conocidas se indican con «—». Al ajustar raciones se mantiene la composición de cada ración.</p></section>`;
+}
+function renderModal(){const r=getRecipe(state.modalId);if(!r)return;const v=selectedVariant(r);const isFitness=state.variant!=='original';const variants=r.fitness_variants||{};const nutritionHtml=renderNutrition(v,state.servings,state.working);
 const sourceLink=(()=>{try{const u=new URL(r.source_url||'');const host=u.hostname.toLowerCase();if(u.protocol==='https:' && /(^|\.)(youtube\.com|youtu\.be|instagram\.com|tiktok\.com)$/.test(host))return `<a href="${esc(u.href)}" target="_blank" rel="noopener noreferrer" class="source-video-link">Ver vídeo original ↗</a>`;}catch{}return '';})();
 const versionButtons=`<button data-variant="original" class="variant-btn ${!isFitness?'active':''}">${icon('chef-hat')} Original</button>`+Object.keys(variants).map(goal=>`<button data-variant="${esc(goal)}" class="variant-btn ${state.variant===goal?'active':''}">${icon('sparkles')} ${esc(GOALS[goal]||goal)}</button>`).join('');
 const control=`<div class="fitness-panel"><div><label for="fitnessGoal">Tu objetivo fitness</label><select id="fitnessGoal">${Object.entries(GOALS).map(([key,label])=>`<option value="${key}" ${state.goal===key?'selected':''}>${label}</option>`).join('')}</select></div><button class="btn primary" data-action="generate-fitness" ${state.working?'disabled':''}>${state.working?'<span class="loader"></span> Preparando…':icon('sparkles')+' '+(variants[state.goal]?'Regenerar fitness':'Crear versión fitness')}</button></div>`;
 const items=v.ingredients.map((item,i)=>`<li><input type="checkbox" id="ing-${i}"><label for="ing-${i}">${esc(ingredientText(item,state.servings/(Number(v.servings)||1)))}${item.note?`<span class="ing-note">${esc(item.note)}</span>`:''}</label></li>`).join('');
 const notes=[...(v.notes||[])];const warn=isFitness&&variants[state.variant]?.method==='basic'?'Versión básica sin IA: verifica la coherencia de las sustituciones y de los pasos.':'';
-const nutritionAvailable=macroList.some(([key])=>macros[key]!=null);
+
 document.getElementById('modalContent').innerHTML=`<div class="modal-header"><button class="close-button" data-close="modal" aria-label="Cerrar">${icon('x')}</button><div class="modal-eyebrow">${isFitness?'VERSIÓN FITNESS · '+esc(GOALS[state.variant]||'PERSONALIZADA'):'MI RECETARIO · VERSIÓN ORIGINAL'}</div><h2 id="detailTitle">${esc(v.title)}</h2><p>${esc(v.description||'Receta guardada en tu colección.')}</p><div class="modal-stat-row"><span class="modal-stat">${icon('clock')} ${duration(v)==null?'Tiempo por confirmar':duration(v)+' minutos'}</span><span class="modal-stat">${icon('users')} ${esc(state.servings)} raciones</span></div></div>
 ${sourceLink}<div class="variant-box"><div class="variant-buttons">${versionButtons}</div>${control}${isFitness?`<div class="variant-note">${variants[state.variant]?.method==='basic'?'Adaptación básica sin IA':'Adaptación creada con IA'}. Las modificaciones pueden alterar el sabor o la textura.</div>`:''}</div>
-${nutritionAvailable?`<div class="macro-row">${macroList.map(([k,label])=>`<div class="macro"><strong>${macros[k]==null?'—':'~'+esc(formatQty(macros[k]))}</strong><small>${label}</small></div>`).join('')}</div><div class="macro-caption">Estimaciones por ración; no equivalen a un análisis nutricional verificado.</div>`:''}
+${nutritionHtml}
 <div class="recipe-cols"><div><h3>Ingredientes</h3><div class="servings-edit"><span>Raciones:</span><button data-servings="-1" aria-label="Reducir raciones">${icon('minus')}</button><strong>${state.servings}</strong><button data-servings="1" aria-label="Aumentar raciones">${icon('plus')}</button></div><ul class="ingredients-list">${items}</ul></div><div><h3>Elaboración paso a paso</h3><ol class="steps-list">${v.steps.map((s,i)=>`<li><span class="step-bullet">${i+1}</span><span>${esc(s)}</span></li>`).join('')}</ol></div></div>
 ${(v.changes||[]).length?`<div class="change-list"><h3>¿Qué hemos cambiado?</h3><ul>${v.changes.map(c=>`<li>${esc(c)}</li>`).join('')}</ul></div>`:''}
 ${notes.length||warn?`<div class="note-list">${notes.map(n=>`<div>• ${esc(n)}</div>`).join('')}${warn?`<div>• ${esc(warn)}</div>`:''}</div>`:''}
@@ -161,6 +167,21 @@ async function submitRecipe(event){
  }catch(error){toast(error.message,true)}
  finally{state.working=false;btn.disabled=false;btn.innerHTML=icon('sparkles')+' Analizar y guardar';if(state.modalId)renderModal()}
 }
+async function estimateNutrition(){
+ const root=getRecipe(state.modalId);if(!root||state.working)return;
+ if(!state.pin){toast('Activa primero Gemini en Ajustes para estimar las calorías y los macros.',true);return;}
+ const id=root.id,variant=state.variant,recipe=selectedVariant(root);
+ state.working=true;renderModal();
+ try{
+  const result=await RecetaFitGeminiFree.estimateNutrition({key:state.pin,recipe});
+  const current=getRecipe(id);if(!current)return;
+  const target=variant==='original'?current:current.fitness_variants?.[variant]?.recipe;
+  if(!target)return;
+  target.nutrition=RecetaFitNutrition.normalize(result);
+  save();toast('Calorías y macronutrientes estimados y guardados para esta receta.');
+ }catch(error){toast(error.message,true)}
+ finally{state.working=false;if(state.modalId===id)renderModal();renderHome()}
+}
 async function generateFitness(){const original=getRecipe(state.modalId);if(!original||state.working)return;const id=original.id,goal=state.goal;state.working=true;renderModal();try{const data=await api('/api/fitness',{method:'POST',body:JSON.stringify({recipe:original,goal})});const same=getRecipe(id);if(!same)return;const variants=same.fitness_variants||{};variants[goal]={recipe:data.recipe,method:data.method};same.fitness_variants=variants;save();state.variant=goal;state.servings=data.recipe.servings||2;toast(data.method==='basic'?'Versión orientativa creada sin IA. Revisa los pasos.':'Versión fitness creada con IA.');}catch(error){toast(error.message,true)}finally{state.working=false;if(state.modalId===id)renderModal();renderHome()}}
 function addShopping(){const recipe=getRecipe(state.modalId);if(!recipe)return;const variant=state.variant;state.shop[recipe.id]={variant,servings:state.servings};save();renderShopping();toast('Receta añadida a la lista de compra.');}
 function shoppingItems(){const mapped=new Map();for(const [id,info] of Object.entries(state.shop)){const root=getRecipe(id);if(!root)continue;const version=info.variant==='original'?root:root.fitness_variants?.[info.variant]?.recipe;if(!version)continue;const scale=(info.servings||version.servings||2)/(version.servings||2);for(const item of version.ingredients||[]){const key=(item.name||'').trim().toLocaleLowerCase('es')+'|'+(item.unit||'').trim().toLocaleLowerCase('es');if(!key||key==='|')continue;const existing=mapped.get(key);if(existing){if(existing.quantity==null||item.quantity==null)existing.quantity=null;else existing.quantity+=Number(item.quantity)*scale;existing.recipes.add(root.title)}else{mapped.set(key,{name:item.name,unit:item.unit||'',quantity:item.quantity==null?null:Number(item.quantity)*scale,key,recipes:new Set([root.title])})}}}return [...mapped.values()].sort((a,b)=>a.name.localeCompare(b.name,'es'))}
@@ -196,7 +217,7 @@ const open=e.target.closest('[data-open]');if(open){openModal(open.dataset.open)
 const close=e.target.closest('[data-close]');if(close){closeModal();return}
 const variant=e.target.closest('[data-variant]');if(variant){setVariant(variant.dataset.variant);return}
 const serve=e.target.closest('[data-servings]');if(serve){state.servings=Math.max(1,Math.min(30,state.servings+Number(serve.dataset.servings)));renderModal();return}
-const action=e.target.closest('[data-action]');if(action){if(action.dataset.action==='generate-fitness')await generateFitness();if(action.dataset.action==='add-shopping')addShopping();if(action.dataset.action==='copy-recipe'){const r=getRecipe(state.modalId);if(r)copyText(recipeAsText(selectedVariant(r)))}if(action.dataset.action==='delete-recipe'){const r=getRecipe(state.modalId);if(r&&confirm(`¿Eliminar «${r.title}»?`)){state.recipes=state.recipes.filter(x=>x.id!==r.id);delete state.shop[r.id];save();closeModal();renderHome();renderShopping();toast('Receta eliminada.')}}return}
+const action=e.target.closest('[data-action]');if(action){if(action.dataset.action==='generate-fitness')await generateFitness();if(action.dataset.action==='estimate-nutrition')await estimateNutrition();if(action.dataset.action==='add-shopping')addShopping();if(action.dataset.action==='copy-recipe'){const r=getRecipe(state.modalId);if(r)copyText(recipeAsText(selectedVariant(r)))}if(action.dataset.action==='delete-recipe'){const r=getRecipe(state.modalId);if(r&&confirm(`¿Eliminar «${r.title}»?`)){state.recipes=state.recipes.filter(x=>x.id!==r.id);delete state.shop[r.id];save();closeModal();renderHome();renderShopping();toast('Receta eliminada.')}}return}
 const remove=e.target.closest('[data-remove-shopping]');if(remove){delete state.shop[remove.dataset.removeShopping];save();renderShopping();return}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.modalId)closeModal()});
