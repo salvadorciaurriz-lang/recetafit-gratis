@@ -10,13 +10,16 @@ const RECIPE_SHAPE=`Devuelve SOLO un objeto JSON válido con estas claves:
 "ingredients":[{"name":"string","quantity":100,"unit":"g","note":""}],
 "steps":["paso detallado"],"notes":[],"changes":[],
 "nutrition":{"calories":null,"protein":null,"carbs":null,"fat":null}}.
-Las cantidades son números o null; unidades separadas; nutrición aproximada POR RACIÓN o null si faltan datos.
+Las cantidades son números o null; unidades separadas. Estima kcal, proteínas, hidratos y grasas POR RACIÓN usando ingredientes y cantidades conocidas. Si falta la cantidad de un ingrediente principal, devuelve null para los valores que no puedas estimar con fundamento; nunca inventes gramos ni declares exactitud.
 Nunca inventes cantidades, ingredientes o tiempos no observables. Si no hay receta legible, responde {"error":"No se identifican ingredientes y pasos suficientes"}. Todo en español.`;
 const EXTRACT_PROMPT=`Analiza el material adjunto (texto, imágenes, audio o vídeo) para extraer una receta realmente presente en el material. Prioriza los ingredientes y cantidades dichas en el audio, escritas en pantalla o en el texto. No supongas que una URL de redes sociales es una transcripción. Usa pasos reproducibles SOLO si se pueden inferir con claridad. Identifica las cantidades que no se especifican con null. ${RECIPE_SHAPE}`;
 const FITNESS_PROMPTS={
- proteina:'Incrementa la proporción de proteína por ración sin disparar las calorías; conserva la identidad del plato.',
- ligera:'Reduce la densidad calórica y las grasas añadidas manteniendo saciedad y sabor; no prometas resultados sin datos.',
- equilibrada:'Optimiza el equilibrio de proteína, hidratos, fibra y verduras conservando el plato.'
+ proteina:'Alta en proteína: aumenta proteínas de calidad por ración con sustituciones y cantidades coherentes.',
+ ligera:'Baja en kcal: reduce la energía por ración sin eliminar proteínas esenciales ni comprometer la saciedad.',
+ baja_carbos:'Baja en hidratos: reduce alimentos ricos en carbohidratos y compensa con verduras y proteínas sin alterar excesivamente el plato.',
+ baja_grasas:'Baja en grasas: limita frituras y grasas añadidas y elige técnicas de cocción y alimentos apropiados.',
+ fibra:'Alta en fibra: prioriza legumbres, verduras, frutas y cereales integrales compatibles con la receta.',
+ equilibrada:'Equilibrada: procura combinar proteínas, grasas, hidratos y verduras de forma proporcionada.'
 };
 const typed=(n)=>Number.isFinite(Number(n))?Number(n):null;
 function normalize(o){
@@ -127,6 +130,24 @@ async function extract({key,kind,url='',text='',file=null,images=[],update=null}
  }
  throw Error('Origen no reconocido.');
 }
+async function estimateNutrition({key,recipe}){
+ if(!recipe||!Array.isArray(recipe.ingredients)||!recipe.ingredients.length)throw Error('La receta no tiene ingredientes suficientes.');
+ const known=recipe.ingredients.filter(i=>i.quantity!==null&&i.quantity!==undefined&&Number(i.quantity)>0).length;
+ if(!known)throw Error('Faltan cantidades de ingredientes. Añade cantidades a la receta para poder estimar sus macros.');
+ const input={title:recipe.title,servings:recipe.servings,ingredients:recipe.ingredients,steps:recipe.steps};
+ const prompt='Estima el valor nutricional POR RACIÓN de esta receta basándote en tablas nutricionales habituales y en las cantidades disponibles. Calcula las kcal, proteínas, hidratos de carbono y grasas teniendo en cuenta grasas de cocción, pesos, pérdidas razonables y número de raciones. No inventes cantidades desconocidas. Si la ausencia de una cantidad relevante impide estimar razonablemente un nutriente, devuelve null para ese campo. Responde SOLAMENTE con un JSON de esta forma: {"calories":number|null,"protein":number|null,"carbs":number|null,"fat":number|null}. Sin texto ni otras claves. Es una estimación, no una medición nutricional. RECETA: '+JSON.stringify(input).slice(0,30000);
+ const result=await requestGeneration(key,[{text:prompt}],2048);
+ const body=(result?.candidates?.[0]?.content?.parts||[]).filter(x=>typeof x.text==='string').map(x=>x.text).join('').trim();
+ let obj;try{obj=JSON.parse(body.replace(/^\x60\x60\x60(?:json)?\s*/i,'').replace(/\s*\x60\x60\x60$/,''));}catch{throw Error('Gemini no ha devuelto valores nutricionales en formato válido.');}
+ if(!obj||typeof obj!=='object')throw Error('Respuesta nutricional no válida.');
+ const nutrition={};
+ for(const key of ['calories','protein','carbs','fat']){
+  const n=obj[key]===null||obj[key]===undefined||obj[key]===''?null:Number(obj[key]);
+  nutrition[key]=n!==null&&Number.isFinite(n)&&n>=0&&n<=100000?n:null;
+ }
+ if(Object.values(nutrition).every(x=>x===null))throw Error('No hay cantidades suficientes para calcular una estimación fiable.');
+ return nutrition;
+}
 async function fitness({key,recipe,goal}){
  if(!FITNESS_PROMPTS[goal])throw Error('Objetivo fitness no válido.');
  const prompt=`Actúa como cocinero y nutricionista culinario. Crea una versión fitness REALISTA de la receta que se adjunta. Objetivo: ${FITNESS_PROMPTS[goal]}.
@@ -135,5 +156,5 @@ async function fitness({key,recipe,goal}){
  Reescribe los pasos para que sean consistentes con ingredientes y técnicas modificadas. ${RECIPE_SHAPE}\nReceta original:\n${JSON.stringify(recipe).slice(0,30000)}`;
  return generate(key,[{text:prompt}]);
 }
-root.RecetaFitGeminiFree={verifyKey,extract,fitness,normalize,parseResponse,supportedYoutube,activeModel:()=>activeModel};
+root.RecetaFitGeminiFree={verifyKey,extract,fitness,estimateNutrition,normalize,parseResponse,supportedYoutube,activeModel:()=>activeModel};
 })(typeof globalThis!=='undefined'?globalThis:this);
