@@ -1,7 +1,8 @@
 /* RecetaFit 3.0 GRATIS - local recipes + Gemini BYOK free tier. */
 (() => {
 'use strict';
-const STORAGE='recetafit_recipes_v1', SHOP='recetafit_shop_v1', CHECKS='recetafit_shopping_checked_v1';
+const STORAGE='recetafit_recipes_v1', SHOP='recetafit_shop_v1', CHECKS='recetafit_shopping_checked_v1', API_KEY_STORAGE='recetafit_gemini_key_device_v1';
+const readSavedKey=()=>{try{return localStorage.getItem(API_KEY_STORAGE)||sessionStorage.getItem('recetafit_gemini_free_key')||''}catch{return ''}};
 const GOALS={proteina:'Alta en proteína',ligera:'Menos calorías',equilibrada:'Equilibrada'};
 const ICONS={
 'layout-grid':'<rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/><rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>',
@@ -30,7 +31,7 @@ const esc=x=>String(x??'').replace(/[&<>"']/g,ch=>({'&':'&amp;','<':'&lt;','>':'
 const read=(key,fallback)=>{try{const val=JSON.parse(localStorage.getItem(key));return val??fallback}catch{return fallback}};
 const uid=()=>typeof crypto!=='undefined'&&crypto.randomUUID?crypto.randomUUID():'r-'+Date.now()+'-'+Math.random().toString(36).slice(2);
 const demoRecipe=()=>({id:'demo-pasta-v1',title:'Pasta cremosa con pollo',description:'Un clásico reconfortante, con salsa suave y un toque de parmesano.',servings:2,prep_minutes:10,cook_minutes:20,ingredients:[{name:'pasta',quantity:200,unit:'g',note:''},{name:'pechuga de pollo',quantity:250,unit:'g',note:''},{name:'nata para cocinar',quantity:150,unit:'ml',note:''},{name:'queso parmesano',quantity:35,unit:'g',note:''},{name:'aceite de oliva',quantity:1,unit:'cucharada',note:''},{name:'ajo',quantity:2,unit:'dientes',note:''},{name:'pimienta y sal',quantity:null,unit:'',note:'al gusto'}],steps:['Cuece la pasta en agua con sal siguiendo el tiempo indicado por el fabricante. Reserva un poco del agua de cocción.','Corta el pollo en trozos, salpimienta y dóralo en una sartén con el aceite.','Incorpora el ajo picado, cocina un minuto y añade la nata. Cocina a fuego suave.','Agrega la pasta y el parmesano. Mezcla, añadiendo agua de cocción si necesitas aligerar la salsa.'],notes:['Receta de ejemplo incluida para explorar la aplicación.'],changes:[],nutrition:{calories:null,protein:null,carbs:null,fat:null},fitness_variants:{},created_at:new Date().toISOString(),demo:true,emoji:'🍝'});
-const state={recipes:read(STORAGE,null),shop:read(SHOP,{}),checks:read(CHECKS,{}),view:'home',modalId:null,variant:'original',goal:'proteina',servings:2,source:'url',search:'',ai:false,lan:false,pin:sessionStorage.getItem('recetafit_gemini_free_key')||'',working:false};
+const state={recipes:read(STORAGE,null),shop:read(SHOP,{}),checks:read(CHECKS,{}),view:'home',modalId:null,variant:'original',goal:'proteina',servings:2,source:'url',search:'',ai:false,lan:false,pin:readSavedKey(),working:false};
 if(!Array.isArray(state.recipes))state.recipes=[demoRecipe()];
 const save=()=>{localStorage.setItem(STORAGE,JSON.stringify(state.recipes));localStorage.setItem(SHOP,JSON.stringify(state.shop));localStorage.setItem(CHECKS,JSON.stringify(state.checks));};
 const getRecipe=id=>state.recipes.find(r=>r.id===id);
@@ -94,9 +95,9 @@ async function api(path,options={}){
 function checkHealth(){
  state.ai=!!state.pin;
  document.getElementById('aiDot').classList.toggle('on',state.ai);
- document.getElementById('aiStatus').textContent=state.ai?'Gemini gratis listo':'IA sin activar';
+ document.getElementById('aiStatus').textContent=state.ai?'Gemini configurado':'IA sin activar';
  document.getElementById('formHint').textContent=state.ai?'Gemini gratuito activado. Las recetas se guardan en este iPhone.':'Para analizar vídeos con IA, configura tu clave GRATIS de Google AI Studio en Ajustes. Sin clave, funciona el modo texto básico.';
- const pinLabel=document.getElementById('pinStatus');if(pinLabel)pinLabel.textContent=state.pin?'Clave gratuita configurada para esta sesión':'Introduce una clave de Google AI Studio gratis, sin facturación';
+ const pinLabel=document.getElementById('pinStatus');if(pinLabel){let persisted=false;try{persisted=!!state.pin&&localStorage.getItem(API_KEY_STORAGE)===state.pin}catch{}pinLabel.textContent=state.pin?(persisted?'Clave guardada en este iPhone. No tendrás que introducirla de nuevo.':'Clave activada, pero aún no guardada permanentemente.'):'Introduce una clave de Google AI Studio gratis, sin facturación';}
 }
 function videoFrames(file){
  return new Promise(async(resolve,reject)=>{
@@ -167,7 +168,7 @@ function renderShopping(){totals();const items=shoppingItems();document.getEleme
 document.getElementById('shoppingRecipes').innerHTML=Object.entries(state.shop).map(([id,info])=>{const r=getRecipe(id);return r?`<div class="included-row"><span>${esc(r.title)}<small style="display:block;color:#a3ac9f;margin-top:3px">${esc(info.variant==='original'?'Original':GOALS[info.variant]||'Fitness')} · ${esc(info.servings)} rac.</small></span><button data-remove-shopping="${esc(id)}" aria-label="Quitar receta">${icon('x')}</button></div>`:''}).join('')||'<p>Sin recetas añadidas.</p>'}
 function exportBackup(){const data={app:'RecetaFit',version:1,exported_at:new Date().toISOString(),recipes:state.recipes,shop:state.shop,checks:state.checks};const blob=new Blob([JSON.stringify(data,null,2)],{type:'application/json'});const url=URL.createObjectURL(blob);const anchor=document.createElement('a');anchor.href=url;anchor.download='RecetaFit-copia-'+new Date().toISOString().slice(0,10)+'.json';document.body.appendChild(anchor);anchor.click();anchor.remove();setTimeout(()=>URL.revokeObjectURL(url),3000);toast('Copia descargada correctamente.');}
 async function importBackup(file){if(!file)return;try{if(file.size>10*1024*1024)throw Error('La copia supera los 10 MB.');const obj=JSON.parse(await file.text());if(obj.app!=='RecetaFit'||!Array.isArray(obj.recipes))throw Error('Este archivo no es una copia válida de RecetaFit.');if(obj.recipes.length>1000)throw Error('La copia contiene demasiadas recetas.');for(const r of obj.recipes){if(typeof r.id!=='string'||typeof r.title!=='string'||!Array.isArray(r.ingredients)||!Array.isArray(r.steps))throw Error('Hay recetas con formato incorrecto.')}if(!confirm(`Importar ${obj.recipes.length} recetas? Se fusionarán con las existentes sin borrar tus datos.`))return;const ids=new Set(state.recipes.map(r=>r.id));for(const r of obj.recipes){if(!ids.has(r.id)){state.recipes.push(r);ids.add(r.id)}}save();renderHome();toast('Recetas importadas.');nav('home')}catch(error){toast(error.message,true)}}
-function init(){document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));save();checkHealth();renderHome();renderShopping();
+function init(){document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTML=icon(el.dataset.icon));if(state.pin){try{localStorage.setItem(API_KEY_STORAGE,state.pin);sessionStorage.removeItem('recetafit_gemini_free_key')}catch{}}save();checkHealth();renderHome();renderShopping();
 document.getElementById('recipeSearch').addEventListener('input',e=>{state.search=e.target.value;renderHome()});
 document.getElementById('addForm').addEventListener('submit',submitRecipe);
 document.getElementById('videoInput').addEventListener('change',e=>{document.getElementById('fileName').textContent=e.target.files[0]?.name||'Ningún archivo seleccionado'});
@@ -181,12 +182,12 @@ const savePinBtn=document.getElementById('savePin');if(savePinBtn)savePinBtn.add
  const key=document.getElementById('aiPin').value.trim();
  savePinBtn.disabled=true;savePinBtn.textContent='Comprobando con Google…';
  try{await RecetaFitGeminiFree.verifyKey(key);
-  state.pin=key;sessionStorage.setItem('recetafit_gemini_free_key',key);checkHealth();toast('Gemini gratuito activado.');
+  state.pin=key;let stored=false;try{localStorage.setItem(API_KEY_STORAGE,key);sessionStorage.removeItem('recetafit_gemini_free_key');stored=true}catch{try{sessionStorage.setItem('recetafit_gemini_free_key',key)}catch{}}checkHealth();toast(stored?'Gemini activado. Clave guardada en este iPhone.':'Gemini activado, pero Safari no permite recordar la clave. Comprueba el modo privado.',!stored);
  }catch(error){toast(error.message,true)}
  finally{savePinBtn.disabled=false;savePinBtn.textContent='Comprobar y activar IA'}
 });
 const forgetPin=document.getElementById('forgetPin');if(forgetPin)forgetPin.addEventListener('click',()=>{
- state.pin='';sessionStorage.removeItem('recetafit_gemini_free_key');document.getElementById('aiPin').value='';checkHealth();toast('Clave borrada de esta sesión.');
+ state.pin='';try{localStorage.removeItem(API_KEY_STORAGE);sessionStorage.removeItem('recetafit_gemini_free_key')}catch{}document.getElementById('aiPin').value='';checkHealth();toast('Clave eliminada de este dispositivo.');
 });
 document.addEventListener('change',e=>{if(e.target.id==='fitnessGoal')state.goal=e.target.value;if(e.target.hasAttribute('data-check')){state.checks[e.target.dataset.check]=e.target.checked;save();renderShopping()}});
 document.addEventListener('click',async e=>{const navTarget=e.target.closest('[data-nav]');if(navTarget){e.preventDefault();nav(navTarget.dataset.nav);return}
