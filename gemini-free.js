@@ -2,7 +2,8 @@
 (function(root){
 'use strict';
 const API='https://generativelanguage.googleapis.com/v1beta';
-const MODEL='gemini-2.5-flash';
+const MODELS=['gemini-3.8-flash','gemini-3.5-flash-lite'];
+let activeModel=MODELS[0];
 const MAX_INLINE=19*1024*1024;
 const RECIPE_SHAPE=`Devuelve SOLO un objeto JSON válido con estas claves:
 {"title":"string","description":"string","servings":2,"prep_minutes":null,"cook_minutes":null,
@@ -46,25 +47,36 @@ async function ensureOk(response){if(response.ok)return response;let detail='Err
  if(response.status===429)throw Error('Se alcanzó el límite GRATUITO de Gemini. Vuelve a intentarlo cuando se restablezca tu cuota.');
  if(response.status===401||response.status===403)throw Error('Google rechazó la clave o no permite este modelo en tu proyecto. Comprueba tu clave gratuita. '+detail.slice(0,160));
  throw Error(`${detail.slice(0,250)} (HTTP ${response.status})`)}
-async function verifyKey(key){
+// Use only models currently listed by Google with a free tier.
+// Fall back to Flash-Lite on retired/unavailable models or temporary overload.
+async function requestGeneration(key,parts,maxOutputTokens=8192){
  checkKey(key);
- // Real generation test: the model-list endpoint alone does not establish that AI requests work.
- // This uses one request from the user's free quota.
- const res=await fetch(`${API}/models/${MODEL}:generateContent`,{
-  method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
-  body:JSON.stringify({contents:[{role:'user',parts:[{text:'Prueba de conexión RecetaFit. Devuelve SOLO el objeto JSON {"ok":true}, sin ningún otro texto.'}]}],generationConfig:{responseMimeType:'application/json',temperature:0,maxOutputTokens:4096}}),cache:'no-store'
- });
- await ensureOk(res);
- const body=await res.json();
- const value=(body?.candidates?.[0]?.content?.parts||[]).filter(x=>typeof x.text==='string').map(x=>x.text).join('').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
- let parsed=null;try{parsed=JSON.parse(value)}catch{}
- if(parsed?.ok!==true)throw Error('Google respondió, pero la prueba de generación no devolvió un resultado válido. Reintenta la conexión.');
+ const candidates=[activeModel,...MODELS.filter(name=>name!==activeModel)];
+ let lastError=null;
+ for(let i=0;i<candidates.length;i++){
+  const model=candidates[i];
+  let response;
+  try{
+   response=await fetch(`${API}/models/${model}:generateContent`,{
+    method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
+    body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens}}),cache:'no-store'
+   });
+  }catch(err){throw Error('No se pudo conectar con Gemini. Revisa tu conexión y vuelve a intentarlo.');}
+  if(response.ok){activeModel=model;return response.json();}
+  // 404: removed / inaccessible model; 503: temporary overload. Try other free model.
+  if((response.status===404||response.status===503)&&i<candidates.length-1){lastError=response.status;continue;}
+  await ensureOk(response);
+ }
+ throw Error('No hay ningún modelo gratuito disponible en este momento.'+(lastError?' HTTP '+lastError:''));
+}
+async function verifyKey(key){
+ const body=await requestGeneration(key,[{text:'Prueba de conexión RecetaFit. Devuelve SOLO el objeto JSON {"ok":true}, sin ningún otro texto.'}],2048);
+ const result=(body?.candidates?.[0]?.content?.parts||[]).filter(x=>typeof x.text==='string').map(x=>x.text).join('').trim();
+ let parsed=null;try{parsed=JSON.parse(result)}catch{}
+ if(parsed?.ok!==true)throw Error('Gemini respondió, pero no completó la prueba. Reintenta la conexión.');
  return true;
 }
-async function generate(key,parts){checkKey(key);
- const response=await fetch(`${API}/models/${MODEL}:generateContent`,{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
- body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',temperature:0.15,maxOutputTokens:4096}}),cache:'no-store'});
- await ensureOk(response);return parseResponse(await response.json());}
+async function generate(key,parts){return parseResponse(await requestGeneration(key,parts));}
 function asDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error('No puedo leer el archivo seleccionado.'));reader.readAsDataURL(file);});}
 async function uploadVideo(key,file,update){
  update?.('Subiendo el vídeo a Google…');
@@ -113,5 +125,5 @@ async function fitness({key,recipe,goal}){
  Reescribe los pasos para que sean consistentes con ingredientes y técnicas modificadas. ${RECIPE_SHAPE}\nReceta original:\n${JSON.stringify(recipe).slice(0,30000)}`;
  return generate(key,[{text:prompt}]);
 }
-root.RecetaFitGeminiFree={verifyKey,extract,fitness,normalize,parseResponse,supportedYoutube};
+root.RecetaFitGeminiFree={verifyKey,extract,fitness,normalize,parseResponse,supportedYoutube,activeModel:()=>activeModel};
 })(typeof globalThis!=='undefined'?globalThis:this);
