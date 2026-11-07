@@ -19,3 +19,16 @@ textarea{width:100%;min-width:0;resize:vertical}
 .topbar-brand{display:flex;align-items:center;gap:9px;min-width:0}
 .topbar-brand-icon{height:34px;width:34px;border-radius:10px;object-fit:contain;background:#f8f8f0;flex-shrink:0}
 @media(max-width:720px){.topbar-brand-icon{width:32px;height:32px}.topbar-brand{gap:8px}}
+
+/* v3.5.0 · valores nutricionales por receta, sin diario */
+.nutrition-panel{margin:0 34px 18px;padding:19px 20px 15px;background:#fafcf7;border:1px solid #e0e9db;border-radius:13px}
+.nutrition-head{display:flex;justify-content:space-between;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+.nutrition-head h3{font:500 21px Georgia,serif;margin:0;color:#264537}
+.nutrition-head p{font-size:11px;color:#7f9085;margin:6px 0 0}
+.nutrition-section-label{font-size:10px;color:#4b7357;text-transform:uppercase;letter-spacing:1.25px;font-weight:800;margin:14px 0 4px}
+.nutrition-panel .macro-row{padding:8px 0 11px;border:0;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}
+.nutrition-panel .macro{padding:11px 5px;min-width:0}
+.nutrition-panel .macro strong{font-size:21px}
+.nutrition-panel .macro small{font-size:10px;overflow-wrap:anywhere}
+.nutrition-disclaimer{color:#889a8d;line-height:1.6;font-size:10px;margin:10px 0 0}
+@media(max-width:600px){.nutrition-panel{margin:0 15px 18px;padding:16px 12px}.nutrition-head{align-items:stretch}.nutrition-head .btn{width:100%}.nutrition-panel .macro-row{gap:6px}.nutrition-panel .macro strong{font-size:17px}.nutrition-panel .macro small{font-size:9px}}
