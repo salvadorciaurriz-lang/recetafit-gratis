@@ -2,7 +2,7 @@
 
 ## Coste
 
-La aplicación y su código son gratuitos. No necesita backend ni OpenAI. **Gemini 2.5 Flash ofrece cuota gratuita limitada**, sin garantía de disponibilidad perpetua. Si el proyecto de Google AI Studio tiene la facturación desactivada, al alcanzar la cuota gratuita la IA dejará de responder en lugar de pasar a una tarifa de pago. **No actives la facturación.**
+La aplicación y su código son gratuitos. No necesita backend ni OpenAI. **Gemini 3.8 Flash (alternativa: 3.5 Flash-Lite) ofrece cuota gratuita limitada**, sin garantía de disponibilidad perpetua. Si el proyecto de Google AI Studio tiene la facturación desactivada, al alcanzar la cuota gratuita la IA dejará de responder en lugar de pasar a una tarifa de pago. **No actives la facturación.**
 
 ## Qué hace
 
