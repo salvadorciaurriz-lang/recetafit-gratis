@@ -46,7 +46,21 @@ async function ensureOk(response){if(response.ok)return response;let detail='Err
  if(response.status===429)throw Error('Se alcanzó el límite GRATUITO de Gemini. Vuelve a intentarlo cuando se restablezca tu cuota.');
  if(response.status===401||response.status===403)throw Error('Google rechazó la clave o no permite este modelo en tu proyecto. Comprueba tu clave gratuita. '+detail.slice(0,160));
  throw Error(`${detail.slice(0,250)} (HTTP ${response.status})`)}
-async function verifyKey(key){checkKey(key);const res=await fetch(`${API}/models/${MODEL}`,{headers:{'x-goog-api-key':key},cache:'no-store'});await ensureOk(res);return true;}
+async function verifyKey(key){
+ checkKey(key);
+ // Real generation test: the model-list endpoint alone does not establish that AI requests work.
+ // This uses one request from the user's free quota.
+ const res=await fetch(`${API}/models/${MODEL}:generateContent`,{
+  method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
+  body:JSON.stringify({contents:[{role:'user',parts:[{text:'Prueba de conexión RecetaFit. Devuelve SOLO el objeto JSON {"ok":true}, sin ningún otro texto.'}]}],generationConfig:{responseMimeType:'application/json',temperature:0,maxOutputTokens:4096}}),cache:'no-store'
+ });
+ await ensureOk(res);
+ const body=await res.json();
+ const value=(body?.candidates?.[0]?.content?.parts||[]).filter(x=>typeof x.text==='string').map(x=>x.text).join('').trim().replace(/^```(?:json)?\s*/i,'').replace(/\s*```$/,'');
+ let parsed=null;try{parsed=JSON.parse(value)}catch{}
+ if(parsed?.ok!==true)throw Error('Google respondió, pero la prueba de generación no devolvió un resultado válido. Reintenta la conexión.');
+ return true;
+}
 async function generate(key,parts){checkKey(key);
  const response=await fetch(`${API}/models/${MODEL}:generateContent`,{method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
  body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',temperature:0.15,maxOutputTokens:4096}}),cache:'no-store'});
