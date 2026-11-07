@@ -14,3 +14,8 @@ textarea{width:100%;min-width:0;resize:vertical}
 @media(max-width:740px){input[type="text"],input[type="url"],input[type="search"],textarea,select{font-size:16px!important}.modal-actions .btn{min-height:46px}.mob-link{min-height:52px}.topbar{padding-top:env(safe-area-inset-top)}.recipe-modal{height:100dvh;padding-bottom:env(safe-area-inset-bottom)}.settings-grid{gap:13px}}
 
 .source-video-link{display:block;margin:0;padding:12px 23px;color:#28533c;background:#f2f7eb;font-size:13px;font-weight:700;text-decoration:underline;text-underline-offset:3px}
+/* RecetaFit 3.4.0 · imagen de marca aprobada */
+.logo-brand-icon{width:45px;height:45px;border-radius:12px;object-fit:contain;flex-shrink:0;display:block;background:#f8f8f0}
+.topbar-brand{display:flex;align-items:center;gap:9px;min-width:0}
+.topbar-brand-icon{height:34px;width:34px;border-radius:10px;object-fit:contain;background:#f8f8f0;flex-shrink:0}
+@media(max-width:720px){.topbar-brand-icon{width:32px;height:32px}.topbar-brand{gap:8px}}
