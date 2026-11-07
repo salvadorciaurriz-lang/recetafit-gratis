@@ -199,6 +199,10 @@ const action=e.target.closest('[data-action]');if(action){if(action.dataset.acti
 const remove=e.target.closest('[data-remove-shopping]');if(remove){delete state.shop[remove.dataset.removeShopping];save();renderShopping();return}
 });
 document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.modalId)closeModal()});
-if('serviceWorker' in navigator&&window.isSecureContext){window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js').catch(()=>{}))}}
+if('serviceWorker' in navigator&&window.isSecureContext){
+ let reloadedAfterUpdate=false;
+ navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloadedAfterUpdate&&navigator.onLine){reloadedAfterUpdate=true;window.location.reload();}});
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=3.2.1',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
+}}
 init();
 })();
