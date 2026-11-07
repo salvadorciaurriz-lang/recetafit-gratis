@@ -2,7 +2,7 @@
 (function(root){
 'use strict';
 const API='https://generativelanguage.googleapis.com/v1beta';
-const MODELS=['gemini-3.8-flash','gemini-3.5-flash-lite'];
+const MODELS=['gemini-3.8-flash','gemini-3.5-flash-lite','gemini-3.5-flash','gemini-3.6-flash'];
 let activeModel=MODELS[0];
 const MAX_INLINE=19*1024*1024;
 const RECIPE_SHAPE=`Devuelve SOLO un objeto JSON válido con estas claves:
@@ -49,25 +49,35 @@ async function ensureOk(response){if(response.ok)return response;let detail='Err
  throw Error(`${detail.slice(0,250)} (HTTP ${response.status})`)}
 // Use only models currently listed by Google with a free tier.
 // Fall back to Flash-Lite on retired/unavailable models or temporary overload.
-async function requestGeneration(key,parts,maxOutputTokens=8192){
+async function requestGeneration(key,parts,maxOutputTokens=8192,update=null){
  checkKey(key);
  const candidates=[activeModel,...MODELS.filter(name=>name!==activeModel)];
- let lastError=null;
- for(let i=0;i<candidates.length;i++){
-  const model=candidates[i];
-  let response;
-  try{
-   response=await fetch(`${API}/models/${model}:generateContent`,{
-    method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
-    body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens}}),cache:'no-store'
-   });
-  }catch(err){throw Error('No se pudo conectar con Gemini. Revisa tu conexión y vuelve a intentarlo.');}
-  if(response.ok){activeModel=model;return response.json();}
-  // 404: removed / inaccessible model; 503: temporary overload. Try other free model.
-  if((response.status===404||response.status===503)&&i<candidates.length-1){lastError=response.status;continue;}
-  await ensureOk(response);
+ const excluded=new Set();
+ let lastTransientStatus=0;
+ // Two bounded rounds. Transient server overload is not an invalid API key.
+ for(let round=0;round<2;round++){
+  let hadTransient=false;
+  for(const model of candidates){
+   if(excluded.has(model))continue;
+   if(round>0||model!==candidates[0])update?.('Google está saturado. Probando otro modelo gratuito…');
+   let response;
+   try{
+    response=await fetch(`${API}/models/${model}:generateContent`,{
+     method:'POST',headers:{'x-goog-api-key':key,'Content-Type':'application/json'},
+     body:JSON.stringify({contents:[{role:'user',parts}],generationConfig:{responseMimeType:'application/json',maxOutputTokens}}),cache:'no-store'
+    });
+   }catch(err){throw Error('No se pudo conectar con Google. Revisa la conexión a Internet y vuelve a intentarlo.');}
+   if(response.ok){activeModel=model;return response.json();}
+   if(response.status===404){excluded.add(model);continue;}
+   if([408,500,502,503,504].includes(response.status)){lastTransientStatus=response.status;hadTransient=true;continue;}
+   // Quota, invalid key and input errors need explicit handling, not retries.
+   await ensureOk(response);
+  }
+  if(!hadTransient)break;
+  if(round===0){update?.('Los modelos están ocupados. Reintentando automáticamente…');await new Promise(resolve=>setTimeout(resolve,1600));}
  }
- throw Error('No hay ningún modelo gratuito disponible en este momento.'+(lastError?' HTTP '+lastError:''));
+ if(lastTransientStatus)throw Error('Google está saturado temporalmente (HTTP '+lastTransientStatus+'). RecetaFit ha probado varios modelos gratuitos y ha reintentado automáticamente. Vuelve a intentarlo en unos minutos o pega la receta en «Texto».');
+ throw Error('Google no ofrece un modelo compatible para esta solicitud. Comprueba los modelos disponibles en tu proyecto de AI Studio.');
 }
 async function verifyKey(key){
  const body=await requestGeneration(key,[{text:'Prueba de conexión RecetaFit. Devuelve SOLO el objeto JSON {"ok":true}, sin ningún otro texto.'}],2048);
@@ -76,7 +86,7 @@ async function verifyKey(key){
  if(parsed?.ok!==true)throw Error('Gemini respondió, pero no completó la prueba. Reintenta la conexión.');
  return true;
 }
-async function generate(key,parts){return parseResponse(await requestGeneration(key,parts));}
+async function generate(key,parts,update=null){return parseResponse(await requestGeneration(key,parts,8192,update));}
 function asDataURL(file){return new Promise((resolve,reject)=>{const reader=new FileReader();reader.onload=()=>resolve(String(reader.result));reader.onerror=()=>reject(new Error('No puedo leer el archivo seleccionado.'));reader.readAsDataURL(file);});}
 async function uploadVideo(key,file,update){
  update?.('Subiendo el vídeo a Google…');
@@ -101,9 +111,9 @@ async function uploadVideo(key,file,update){
 }
 const supportedYoutube=(url)=>{try{const u=new URL(url);const h=u.hostname.toLowerCase();return u.protocol==='https:'&&(h==='youtu.be'||h==='youtube.com'||h==='www.youtube.com'||h==='m.youtube.com'||h==='youtube-nocookie.com');}catch{return false}};
 async function extract({key,kind,url='',text='',file=null,images=[],update=null}){
- if(kind==='text')return generate(key,[{text:EXTRACT_PROMPT+'\n\nTEXTO DE LA RECETA:\n'+text.slice(0,30000)}]);
+ if(kind==='text')return generate(key,[{text:EXTRACT_PROMPT+'\n\nTEXTO DE LA RECETA:\n'+text.slice(0,30000)}],update);
  if(kind==='url'){
-  if(supportedYoutube(url))return generate(key,[{text:EXTRACT_PROMPT+'\nContexto adicional:\n'+text.slice(0,10000)},{file_data:{file_uri:url}}]);
+  if(supportedYoutube(url))return generate(key,[{text:EXTRACT_PROMPT+'\nContexto adicional:\n'+text.slice(0,10000)},{file_data:{file_uri:url}}],update);
   if(!text.trim())throw Error('Instagram y TikTok no permiten analizar siempre el vídeo desde su enlace. Guárdalo y súbelo en «Archivo», o pega su descripción.');
   const r=await generate(key,[{text:EXTRACT_PROMPT+'\n\nIMPORTANTE: NO HAS VISTO EL VÍDEO DE ESTE ENLACE. Extrae SOLO del texto aportado.\nURL de referencia: '+url.slice(0,300)+'\nTEXTO:\n'+text.slice(0,30000)}]);
   r.notes.push('Extraída únicamente del texto aportado; el vídeo de la red social no se ha analizado.');return r;
