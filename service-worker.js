@@ -1,6 +1,6 @@
 // Offline shell for HTTPS installable PWA. No user recipes are cached in the service worker.
-const CACHE='recetafit-iphone-v3.3.0-free';
-const ASSETS=['./?v=3.3.0','./index.html?v=3.3.0','./app.js?v=3.3.0','./gemini-free.js?v=3.3.0','./offline-core.js?v=3.3.0','./styles.css?v=3.3.0','./manifest.webmanifest?v=3.3.0','./icon.svg'];
+const CACHE='recetafit-iphone-v3.4.0-free';
+const ASSETS=['./?v=3.4.0','./index.html?v=3.4.0','./app.js?v=3.4.0','./gemini-free.js?v=3.4.0','./offline-core.js?v=3.4.0','./styles.css?v=3.4.0','./manifest.webmanifest?v=3.4.0','./icon-192.png?v=3.4.0'];
 self.addEventListener('install', e=>e.waitUntil(caches.open(CACHE).then(c=>c.addAll(ASSETS)).then(()=>self.skipWaiting())));
 self.addEventListener('activate', e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k!==CACHE).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener('fetch', e=>{if(e.request.method!=='GET'||new URL(e.request.url).origin!==self.location.origin||new URL(e.request.url).pathname.startsWith('/api/'))return;
