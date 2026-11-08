@@ -173,7 +173,7 @@ async function submitRecipe(event){
        data=await api('/api/extract-frames',{method:'POST',body:JSON.stringify({images,text:form.get('text')||''})});
      }
    }else data=await api('/api/extract',{method:'POST',body:form});
-   addRecipe(data.recipe,data.method,data.source_url||'');
+   addRecipe(data.recipe,data.method,data.source_url||form.get('url')||'');
    document.getElementById('addForm').reset();document.getElementById('fileName').textContent='Ningún archivo seleccionado';document.getElementById('urlFileName').textContent='No hay vídeo adjunto';document.getElementById('urlMediaFallback').classList.remove('needs-file');
  }catch(error){
    if(kind==='url'&&/No es posible leer automáticamente el contenido de este enlace|No es posible leer automáticamente|no permiten analizar/i.test(error.message)){
@@ -242,7 +242,7 @@ document.addEventListener('keydown',e=>{if(e.key==='Escape'&&state.modalId)close
 if('serviceWorker' in navigator&&window.isSecureContext){
  let reloadedAfterUpdate=false;
  navigator.serviceWorker.addEventListener('controllerchange',()=>{if(!reloadedAfterUpdate&&navigator.onLine){reloadedAfterUpdate=true;window.location.reload();}});
- window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=3.6.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
+ window.addEventListener('load',()=>navigator.serviceWorker.register('./service-worker.js?v=3.7.0',{updateViaCache:'none'}).then(reg=>reg.update()).catch(()=>{}));
 }}
 init();
 })();
