@@ -141,6 +141,8 @@ async function submitRecipe(event){
  if(kind==='url'){
    form.append('url',document.getElementById('urlInput').value.trim());
    form.append('text',document.getElementById('urlRecipeText').value.trim());
+    const attached=document.getElementById('urlVideoInput').files?.[0];
+    if(attached){form.set('kind','video');form.append('video',attached,attached.name);}
  }else if(kind==='video'){
    const file=document.getElementById('videoInput').files[0];
    if(!file){toast('Selecciona un vídeo o utiliza la pestaña Texto.',true);return}
@@ -155,11 +157,11 @@ async function submitRecipe(event){
     const info=document.getElementById('descriptionFetchInfo');
     const url=form.get('url')||'';
     const description=await RecetaFitDescription.retrieve(url,state.pin);
-    if(description.description){form.append('description',description.description);form.append('description_status',description.status);}
+    if(description.description){form.append('description',description.description);form.append('description_status',description.status);if(form.get('kind')==='video')form.set('text','DESCRIPCIÓN PÚBLICA ('+description.status+'):\n'+description.description+'\n\nTEXTO APORTADO:\n'+String(form.get('text')||''));}
     if(info){info.textContent=description.description?(description.status==='full'?'Descripción recuperada: se usarán sus cantidades antes que las estimaciones visuales.':'Texto público parcial recuperado; el vídeo completará los datos cuando sea accesible.'):(description.message||'Descripción no disponible. Se intentará obtener ingredientes del vídeo.');}
     btn.innerHTML='<span class="loader"></span> Analizando receta…';
    }
-   const selectedFile=kind==='video'?document.getElementById('videoInput').files[0]:null;
+   const selectedFile=form.get('kind')==='video'?form.get('video'):null;
    if(selectedFile&&selectedFile.size>19*1024*1024){
      if(!state.ai)throw Error('Activa tu clave gratuita de Gemini en Ajustes.');
      try{data=await api('/api/extract',{method:'POST',body:form})}
@@ -172,8 +174,14 @@ async function submitRecipe(event){
      }
    }else data=await api('/api/extract',{method:'POST',body:form});
    addRecipe(data.recipe,data.method,data.source_url||'');
-   document.getElementById('addForm').reset();document.getElementById('fileName').textContent='Ningún archivo seleccionado';
- }catch(error){toast(error.message,true)}
+   document.getElementById('addForm').reset();document.getElementById('fileName').textContent='Ningún archivo seleccionado';document.getElementById('urlFileName').textContent='No hay vídeo adjunto';document.getElementById('urlMediaFallback').classList.remove('needs-file');
+ }catch(error){
+   if(kind==='url'&&/No es posible leer automáticamente el contenido de este enlace|No es posible leer automáticamente|no permiten analizar/i.test(error.message)){
+    document.getElementById('urlMediaFallback').classList.add('needs-file');
+    document.getElementById('descriptionFetchInfo').textContent='No se pudo acceder al vídeo desde esta plataforma. Adjunta el archivo o pega la descripción sin perder el enlace.';
+    toast('Adjunta el vídeo aquí mismo o pega la descripción para analizarlo.',true);
+   }else toast(error.message,true);
+  }
  finally{state.working=false;btn.disabled=false;btn.innerHTML=icon('sparkles')+' Analizar y guardar';if(state.modalId)renderModal()}
 }
 async function estimateNutrition(){
@@ -202,6 +210,7 @@ function init(){document.querySelectorAll('[data-icon]').forEach(el=>el.innerHTM
 document.getElementById('recipeSearch').addEventListener('input',e=>{state.search=e.target.value;renderHome()});
 document.getElementById('addForm').addEventListener('submit',submitRecipe);
 document.getElementById('videoInput').addEventListener('change',e=>{document.getElementById('fileName').textContent=e.target.files[0]?.name||'Ningún archivo seleccionado'});
+ document.getElementById('urlVideoInput').addEventListener('change',e=>{const file=e.target.files?.[0];document.getElementById('urlFileName').textContent=file?'Vídeo adjunto: '+file.name:'No hay vídeo adjunto';document.getElementById('urlMediaFallback').classList.toggle('needs-file',!file);});
 document.getElementById('exportRecipes').addEventListener('click',exportBackup);
 document.getElementById('importFile').addEventListener('change',e=>importBackup(e.target.files?.[0]));
 document.getElementById('copyShopping').addEventListener('click',()=>{const items=shoppingItems();if(!items.length){toast('Tu lista está vacía.',true);return}copyText('LISTA DE COMPRA · RECETAFIT\n\n'+items.map(x=>`${state.checks[x.key]?'☑':'☐'} ${x.quantity==null?'':formatQty(x.quantity)+' '+x.unit+' '}${x.name}`).join('\n'))});
