@@ -45,7 +45,7 @@ document.getElementById('recipeGrid').innerHTML=cards+empty+`<button class="new-
 }
 function setSource(mode){state.source=mode;document.querySelectorAll('.source-tab').forEach(b=>b.classList.toggle('active',b.dataset.source===mode));document.querySelectorAll('.source-panel').forEach(p=>p.hidden=p.dataset.panel!==mode)}
 const formatQty=n=>{if(n===null||n===undefined||n==='')return '';const value=Number(n);if(!Number.isFinite(value))return '';return Number(value.toFixed(2)).toLocaleString('es-ES',{maximumFractionDigits:2})};
-function ingredientText(item,multiplier=1){const val=item.quantity==null?'':formatQty(Number(item.quantity)*multiplier);return `${val}${val?' ':''}${item.unit?item.unit+' ':''}${item.name}`.trim()}
+function ingredientText(item,multiplier=1){const val=item.quantity==null?'':formatQty(Number(item.quantity)*multiplier);return `${item.estimated?'≈ ':''}${val}${val?' ':''}${item.unit?item.unit+' ':''}${item.name}`.trim()}
 function selectedVariant(r){return state.variant==='original'?r:r.fitness_variants?.[state.variant]?.recipe||r}
 function setVariant(key){state.variant=key;const r=getRecipe(state.modalId);if(!r)return;state.servings=selectedVariant(r).servings||2;renderModal()}
 function openModal(id){if(!getRecipe(id))return;state.modalId=id;state.variant='original';state.servings=getRecipe(id).servings||2;state.goal='proteina';document.getElementById('modalLayer').hidden=false;document.body.style.overflow='hidden';renderModal()}
@@ -61,7 +61,7 @@ const sourceLink=(()=>{try{const u=new URL(r.source_url||'');const host=u.hostna
 const versionButtons=`<button data-variant="original" class="variant-btn ${!isFitness?'active':''}">${icon('chef-hat')} Original</button>`+Object.keys(variants).map(goal=>`<button data-variant="${esc(goal)}" class="variant-btn ${state.variant===goal?'active':''}">${icon('sparkles')} ${esc(GOALS[goal]||goal)}</button>`).join('');
 const control=`<div class="fitness-panel"><div><label for="fitnessGoal">Tu objetivo fitness</label><select id="fitnessGoal">${Object.entries(GOALS).map(([key,label])=>`<option value="${key}" ${state.goal===key?'selected':''}>${label}</option>`).join('')}</select></div><button class="btn primary" data-action="generate-fitness" ${state.working?'disabled':''}>${state.working?'<span class="loader"></span> Preparando…':icon('sparkles')+' '+(variants[state.goal]?'Regenerar fitness':'Crear versión fitness')}</button></div>`;
 const items=v.ingredients.map((item,i)=>`<li><input type="checkbox" id="ing-${i}"><label for="ing-${i}">${esc(ingredientText(item,state.servings/(Number(v.servings)||1)))}${item.note?`<span class="ing-note">${esc(item.note)}</span>`:''}</label></li>`).join('');
-const notes=[...(v.notes||[])];const warn=isFitness&&variants[state.variant]?.method==='basic'?'Versión básica sin IA: verifica la coherencia de las sustituciones y de los pasos.':'';
+const notes=[...(v.notes||[])];if((v.ingredients||[]).some(item=>item.estimated===true))notes.unshift('≈ significa que Gemini ha estimado el ingrediente o su cantidad a partir del vídeo; comprueba las proporciones antes de cocinar.');const warn=isFitness&&variants[state.variant]?.method==='basic'?'Versión básica sin IA: verifica la coherencia de las sustituciones y de los pasos.':'';
 
 document.getElementById('modalContent').innerHTML=`<div class="modal-header"><button class="close-button" data-close="modal" aria-label="Cerrar">${icon('x')}</button><div class="modal-eyebrow">${isFitness?'VERSIÓN FITNESS · '+esc(GOALS[state.variant]||'PERSONALIZADA'):'MI RECETARIO · VERSIÓN ORIGINAL'}</div><h2 id="detailTitle">${esc(v.title)}</h2><p>${esc(v.description||'Receta guardada en tu colección.')}</p><div class="modal-stat-row"><span class="modal-stat">${icon('clock')} ${duration(v)==null?'Tiempo por confirmar':duration(v)+' minutos'}</span><span class="modal-stat">${icon('users')} ${esc(state.servings)} raciones</span></div></div>
 ${sourceLink}<div class="variant-box"><div class="variant-buttons">${versionButtons}</div>${control}${isFitness?`<div class="variant-note">${variants[state.variant]?.method==='basic'?'Adaptación básica sin IA':'Adaptación creada con IA'}. Las modificaciones pueden alterar el sabor o la textura.</div>`:''}</div>
@@ -87,7 +87,7 @@ async function api(path,options={}){
    throw Error('Para analizar vídeos con IA, activa tu clave gratuita de Google en Ajustes.');
   }
   const value=await RecetaFitGeminiFree.extract({key:state.pin,kind,
-   url:f.get('url')||'',text:f.get('text')||'',file:f.get('video') instanceof File ? f.get('video'):null,
+   url:f.get('url')||'',text:f.get('text')||'',description:f.get('description')||'',descriptionStatus:f.get('description_status')||'',file:f.get('video') instanceof File ? f.get('video'):null,
    update:s=>{const btn=document.getElementById('extractButton');if(btn)btn.innerHTML='<span class="loader"></span> '+esc(s)}});
   return {recipe:value,method:'gemini_free',source_url:f.get('url')||''};
  }
@@ -150,6 +150,15 @@ async function submitRecipe(event){
  state.working=true;const btn=document.getElementById('extractButton');btn.disabled=true;btn.innerHTML='<span class="loader"></span> Analizando…';
  try{
    let data;
+   if(kind==='url'){
+    btn.innerHTML='<span class="loader"></span> Buscando descripción…';
+    const info=document.getElementById('descriptionFetchInfo');
+    const url=form.get('url')||'';
+    const description=await RecetaFitDescription.retrieve(url,state.pin);
+    if(description.description){form.append('description',description.description);form.append('description_status',description.status);}
+    if(info){info.textContent=description.description?(description.status==='full'?'Descripción recuperada: se usarán sus cantidades antes que las estimaciones visuales.':'Texto público parcial recuperado; el vídeo completará los datos cuando sea accesible.'):(description.message||'Descripción no disponible. Se intentará obtener ingredientes del vídeo.');}
+    btn.innerHTML='<span class="loader"></span> Analizando receta…';
+   }
    const selectedFile=kind==='video'?document.getElementById('videoInput').files[0]:null;
    if(selectedFile&&selectedFile.size>19*1024*1024){
      if(!state.ai)throw Error('Activa tu clave gratuita de Gemini en Ajustes.');
