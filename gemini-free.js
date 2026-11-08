@@ -7,12 +7,12 @@ let activeModel=MODELS[0];
 const MAX_INLINE=19*1024*1024;
 const RECIPE_SHAPE=`Devuelve SOLO un objeto JSON válido con estas claves:
 {"title":"string","description":"string","servings":2,"prep_minutes":null,"cook_minutes":null,
-"ingredients":[{"name":"string","quantity":100,"unit":"g","note":""}],
+"ingredients":[{"name":"string","quantity":100,"unit":"g","note":"","estimated":false,"evidence":"description|audio|screen|video|text|unknown"}],
 "steps":["paso detallado"],"notes":[],"changes":[],
 "nutrition":{"calories":null,"protein":null,"carbs":null,"fat":null}}.
-Las cantidades son números o null; unidades separadas. Estima kcal, proteínas, hidratos y grasas POR RACIÓN usando ingredientes y cantidades conocidas. Si falta la cantidad de un ingrediente principal, devuelve null para los valores que no puedas estimar con fundamento; nunca inventes gramos ni declares exactitud.
+Las cantidades son números o null; unidades separadas. Las cantidades tomadas literalmente del texto, audio o pantalla se marcan estimated:false y se indica evidence; si se calculan aproximadamente observando un ingrediente en el vídeo o sus utensilios, estimated:true, evidence:"video" y una nota indicando que son aproximadas. No las presentes como exactas. Si el ingrediente es visible pero su cantidad no se puede estimar responsablemente, devuelve quantity:null. Estima kcal, proteínas, hidratos y grasas POR RACIÓN de forma orientativa: si faltan datos importantes usa null, no exactitud falsa.
 Nunca inventes cantidades, ingredientes o tiempos no observables. Si no hay receta legible, responde {"error":"No se identifican ingredientes y pasos suficientes"}. Todo en español.`;
-const EXTRACT_PROMPT=`Analiza el material adjunto (texto, imágenes, audio o vídeo) para extraer una receta realmente presente en el material. Prioriza los ingredientes y cantidades dichas en el audio, escritas en pantalla o en el texto. No supongas que una URL de redes sociales es una transcripción. Usa pasos reproducibles SOLO si se pueden inferir con claridad. Identifica las cantidades que no se especifican con null. ${RECIPE_SHAPE}`;
+const EXTRACT_PROMPT=`Analiza el material realmente proporcionado para extraer una receta. ORDEN DE EVIDENCIAS: (1) cantidades exactas expresadas en la DESCRIPCIÓN de la publicación, (2) ingredientes/cantidades del audio o texto sobreimpreso, (3) ingredientes y cantidades que puedes estimar visualmente por volumen, utensilios, proporciones y raciones. Si vídeo e ingredientes escritos difieren, prioriza lo escrito y señala la discrepancia. Cuando NO haya cantidad escrita y el vídeo muestre suficiente información para aproximarla, aporta una cantidad razonable EN ESTIMACIÓN, etiqueta estimated:true y escribe una nota como "Cantidad aproximada estimada por imagen; compruébala". Si solo ves el ingrediente sin una referencia de tamaño/volumen, marca quantity:null; nunca inventes ingredientes que no veas ni oigas. Distingue lo CONFIRMADO de lo ESTIMADO. La descripción NO está implícita en la URL del vídeo. Si no recibes vídeo ni imágenes, NO afirmes haberlos visto ni estimes a partir de imágenes inexistentes. No extrapoles medidas precisas con seguridad injustificada. Usa pasos reproducibles coherentes con las evidencias. ${RECIPE_SHAPE}`;
 const FITNESS_PROMPTS={
  proteina:'Alta en proteína: aumenta proteínas de calidad por ración con sustituciones y cantidades coherentes.',
  ligera:'Baja en kcal: reduce la energía por ración sin eliminar proteínas esenciales ni comprometer la saciedad.',
@@ -28,7 +28,10 @@ function normalize(o){
  const ingredients=(Array.isArray(o.ingredients)?o.ingredients:[]).slice(0,80).map(x=>({
   name:String(x?.name||'').trim().slice(0,140),
   quantity:x?.quantity===null||x?.quantity===''||x?.quantity===undefined?null:typed(x.quantity),
-  unit:String(x?.unit||'').trim().slice(0,35),note:String(x?.note||'').trim().slice(0,200)
+  unit:String(x?.unit||'').trim().slice(0,35),
+  estimated:x?.estimated===true,
+  evidence:['description','audio','screen','video','text'].includes(x?.evidence)?x.evidence:'unknown',
+  note:(x?.estimated===true?'Estimación aproximada, confirma la cantidad. ':'')+String(x?.note||'').trim().slice(0,170)
  })).filter(x=>x.name);
  const steps=(Array.isArray(o.steps)?o.steps:[]).slice(0,40).map(x=>String(x||'').trim().slice(0,600)).filter(Boolean);
  if(!title||!ingredients.length||!steps.length)throw Error('La IA no ha identificado título, ingredientes y preparación. Adjunta el vídeo o pega la descripción.');
@@ -113,13 +116,20 @@ async function uploadVideo(key,file,update){
  throw Error('El vídeo sigue procesándose. Prueba de nuevo con un archivo más corto.');
 }
 const supportedYoutube=(url)=>{try{const u=new URL(url);const h=u.hostname.toLowerCase();return u.protocol==='https:'&&(h==='youtu.be'||h==='youtube.com'||h==='www.youtube.com'||h==='m.youtube.com'||h==='youtube-nocookie.com');}catch{return false}};
-async function extract({key,kind,url='',text='',file=null,images=[],update=null}){
+async function extract({key,kind,url='',text='',description='',descriptionStatus='',file=null,images=[],update=null}){
  if(kind==='text')return generate(key,[{text:EXTRACT_PROMPT+'\n\nTEXTO DE LA RECETA:\n'+text.slice(0,30000)}],update);
  if(kind==='url'){
-  if(supportedYoutube(url))return generate(key,[{text:EXTRACT_PROMPT+'\nContexto adicional:\n'+text.slice(0,10000)},{file_data:{file_uri:url}}],update);
-  if(!text.trim())throw Error('Instagram y TikTok no permiten analizar siempre el vídeo desde su enlace. Guárdalo y súbelo en «Archivo», o pega su descripción.');
-  const r=await generate(key,[{text:EXTRACT_PROMPT+'\n\nIMPORTANTE: NO HAS VISTO EL VÍDEO DE ESTE ENLACE. Extrae SOLO del texto aportado.\nURL de referencia: '+url.slice(0,300)+'\nTEXTO:\n'+text.slice(0,30000)}]);
-  r.notes.push('Extraída únicamente del texto aportado; el vídeo de la red social no se ha analizado.');return r;
+  const descriptionText=String(description||'').slice(0,12000);
+  const publicDescription=descriptionText?'DESCRIPCIÓN DE LA PUBLICACIÓN ('+(descriptionStatus==='full'?'completa':descriptionStatus==='partial'?'parcial':'fuente sin verificar')+'):\n'+descriptionText+'\n\n':'DESCRIPCIÓN DE LA PUBLICACIÓN: no recuperada automáticamente.\n\n';
+  const manual=String(text||'').trim()?'TEXTO APORTADO MANUALMENTE:\n'+text.slice(0,12000):'';
+  if(supportedYoutube(url)){
+   const result=await generate(key,[{text:EXTRACT_PROMPT+'\n\n'+publicDescription+manual+'\nAnaliza también el vídeo de YouTube adjunto, especialmente las imágenes para cantidades no indicadas.'},{file_data:{file_uri:url}}],update);
+   if(!descriptionText)result.notes.push('La descripción no estaba disponible automáticamente; las cantidades obtenidas de imágenes pueden ser estimaciones.');
+   return result;
+  }
+  if(!descriptionText&&!manual)throw Error('No es posible leer automáticamente el contenido de este enlace. Sube el vídeo en «Archivo» para estimar lo visible o pega la descripción.');
+  const r=await generate(key,[{text:EXTRACT_PROMPT+'\n\nNO HAS VISTO EL VÍDEO DE ESTA URL. NO ESTIMES INGREDIENTES VISUALES, SOLO UTILIZA EL TEXTO.\n'+publicDescription+manual}],update);
+  r.notes.push('Esta receta procede del texto de la publicación, no del análisis visual del vídeo.');return r;
  }
  if(kind==='video'){
   if(!file&&(!images||!images.length))throw Error('Selecciona un vídeo.');
