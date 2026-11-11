@@ -1,5 +1,5 @@
 const cacheName="car-radio-v3";
-const files=["./","./index.html","./sync.js","./manifest.webmanifest","./icon.svg"];
+const files=["./","./index.html","./sync.js?v=1","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(cacheName).then(c=>c.addAll(files)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("car-radio-")&&k!==cacheName).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
 self.addEventListener("fetch",e=>{const u=new URL(e.request.url);if(e.request.method!=="GET"||u.origin!==self.location.origin)return;e.respondWith(fetch(e.request).then(res=>{if(res.ok){let c=res.clone();caches.open(cacheName).then(cache=>cache.put(e.request,c))}return res}).catch(()=>caches.match(e.request).then(r=>r||caches.match("./index.html"))))});
