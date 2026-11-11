@@ -6,6 +6,17 @@ const CK=PREFIX+"firebase_cfg_v1",AK=PREFIX+"firebase_auth_v1";
 const RULES=["rules_version = '2';","service cloud.firestore {"," match /databases/{database}/documents {","  match /users/{uid}/apps/{appId} {","   allow read, write: if request.auth != null && request.auth.uid == uid && appId == 'car-radio';","  }"," }","}"].join("\n");
 const get=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
 let cfg=get(CK,{projectId:"",apiKey:""}),auth=get(AK,null);
+/* Enlace público de configuración: permite pasar solo la configuración Web de Firebase al móvil. */
+try{
+ const url=new URL(location.href),projectId=url.searchParams.get("carProject"),apiKey=url.searchParams.get("carApiKey");
+ if(projectId&&apiKey&&/^[a-z0-9][a-z0-9-]{3,}$/.test(projectId)&&apiKey.length>=12){
+  if(projectId!==cfg.projectId||apiKey!==cfg.apiKey){localStorage.removeItem(AK);auth=null}
+  cfg={projectId,apiKey};localStorage.setItem(CK,JSON.stringify(cfg));
+  url.searchParams.delete("carProject");url.searchParams.delete("carApiKey");
+  history.replaceState(null,"",url.pathname+url.search+url.hash);
+ }
+}catch(e){/* La configuración manual sigue disponible. */}
+
 let remoteTime=null,ready=false,busy=false,applying=false,dirty=false,conflict=null;
 let saveTimer=null,retryTimer=null;
 const byId=id=>document.getElementById(id);
@@ -133,6 +144,7 @@ function initUI(){
  '<label>ID del proyecto Firebase</label><input id="cloudProject" placeholder="mi-proyecto" autocomplete="off">',
  '<label>Clave web API de Firebase (NO Gemini)</label><input id="cloudApiKey" placeholder="AIza…" autocomplete="off">',
  '<button class="secondary" style="margin-top:12px" id="cloudSaveConfig">Guardar proyecto</button>',
+ '<button class="secondary" style="margin:12px 0 0 8px" id="cloudLink">Copiar enlace para el iPhone</button>',
  '<label>Correo</label><input id="cloudEmail" type="email" autocomplete="email" placeholder="correo@ejemplo.com">',
  '<label>Contraseña</label><input id="cloudPassword" type="password" autocomplete="current-password">',
  '<div class="actions"><button id="cloudLogin">Entrar</button><button class="secondary" id="cloudSignup">Crear cuenta</button></div>',
@@ -152,6 +164,13 @@ function initUI(){
  byId("cloudRules").textContent=RULES;
  byId("cloudProject").value=cfg.projectId||"";byId("cloudApiKey").value=cfg.apiKey||"";byId("cloudEmail").value=auth?.email||"";
  byId("cloudSaveConfig").onclick=configSave;
+ byId("cloudLink").onclick=async()=>{
+  if(!cfg.projectId||!cfg.apiKey)return status("Primero guarda la configuración de Firebase.");
+  const url=new URL(location.href);url.searchParams.set("carProject",cfg.projectId);url.searchParams.set("carApiKey",cfg.apiKey);
+  try{await navigator.clipboard.writeText(url.toString());status("Enlace copiado. Envíatelo al iPhone y ábrelo allí.")}
+  catch{window.prompt("Copia este enlace y ábrelo en el iPhone:",url.toString())}
+ };
+
  byId("cloudLogin").onclick=()=>login(false);
  byId("cloudSignup").onclick=()=>login(true);
  byId("cloudLogout").onclick=()=>{auth=null;ready=false;dirty=false;conflict=null;clearTimeout(saveTimer);clearTimeout(retryTimer);localStorage.removeItem(AK);conflictEl.hidden=true;status("Sesión cerrada. Datos locales conservados.")};
