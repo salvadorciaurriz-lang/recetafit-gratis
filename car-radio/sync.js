@@ -1,7 +1,7 @@
 /* CAR Radio Sync: Firebase Authentication + Cloud Firestore, optional and free-tier compatible. */
 (()=>{
 "use strict";
-const KEYS=new Set(["script","profiles","selection","model"]);
+const KEYS=new Set(["script","profiles","selection","model","speed"]);
 const CK=PREFIX+"firebase_cfg_v1",AK=PREFIX+"firebase_auth_v1";
 const RULES=["rules_version = '2';","service cloud.firestore {"," match /databases/{database}/documents {","  match /users/{uid}/apps/{appId} {","   allow read, write: if request.auth != null && request.auth.uid == uid && appId == 'car-radio';","  }"," }","}"].join("\n");
 const get=(k,f)=>{try{return JSON.parse(localStorage.getItem(k))??f}catch{return f}};
@@ -22,19 +22,19 @@ let saveTimer=null,retryTimer=null;
 const byId=id=>document.getElementById(id);
 let statusEl,smallEl,conflictEl;
 const lastKey=()=>PREFIX+"firebase_last_"+(auth?.uid||"none");
-const snapshot=()=>({script:scriptText,profiles:JSON.parse(JSON.stringify(profiles)),selection:[...selection],model});
+const snapshot=()=>({script:scriptText,profiles:JSON.parse(JSON.stringify(profiles)),selection:[...selection],model,speed:load("speed",1)});
 const serialized=()=>JSON.stringify(snapshot());
 function status(s){if(statusEl)statusEl.textContent=s;if(smallEl)smallEl.textContent="Nube: "+s}
 function valid(v){return v&&typeof v.script==="string"&&v.script.length<350000&&
  Array.isArray(v.profiles)&&v.profiles.every(p=>p&&typeof p.id==="string"&&typeof p.name==="string"&&typeof p.style==="string"&&VOICES.includes(p.voice))&&
- Array.isArray(v.selection)&&v.selection.length===2&&v.selection.every(id=>v.profiles.some(p=>p.id===id))&&typeof v.model==="string"&&v.model.length<150&&JSON.stringify(v).length<800000}
+ Array.isArray(v.selection)&&v.selection.length===2&&v.selection.every(id=>v.profiles.some(p=>p.id===id))&&typeof v.model==="string"&&v.model.length<150&&(v.speed===undefined||[0.85,1,1.1,1.2,1.25,1.35,1.5,1.75,2].includes(v.speed))&&JSON.stringify(v).length<800000}
 function apply(v){
  if(!valid(v))throw Error("El documento remoto no es compatible.");
  localStorage.setItem(PREFIX+"cloud_backup_before_restore",serialized());
  applying=true;
  try{
   scriptText=v.script;profiles=v.profiles;selection=v.selection;model=v.model;
-  save("script",scriptText);save("profiles",profiles);save("selection",selection);save("model",model);
+  save("script",scriptText);save("profiles",profiles);save("selection",selection);save("model",model);save("speed",v.speed??1);window.CARRadioSpeed?.setRate(v.speed??1,false);
   $("script").value=scriptText;$("model").value=model;renderProfiles();recalc();refreshLibrary();
  }finally{applying=false}
 }
@@ -70,7 +70,7 @@ async function initialize(){
   if(!remote.exists){ready=true;dirty=true}
   else{
    const incoming=JSON.stringify(remote.value);
-   const defaultLocal=scriptText===DEFAULT_SCRIPT&&JSON.stringify(profiles)===JSON.stringify(DEFAULT_PROFILES)&&JSON.stringify(selection)===JSON.stringify(["julian","nando"])&&model==="gemini-3.8-flash-tts";
+   const defaultLocal=scriptText===DEFAULT_SCRIPT&&JSON.stringify(profiles)===JSON.stringify(DEFAULT_PROFILES)&&JSON.stringify(selection)===JSON.stringify(["julian","nando"])&&model==="gemini-3.8-flash-tts"&&load("speed",1)===1;
    if(incoming===local||(!last&&defaultLocal)||(last&&local===last)){
     if(incoming!==local)apply(remote.value);
     finish(remote,incoming);
@@ -140,7 +140,7 @@ function initUI(){
  const box=document.createElement("div");box.className="panel";
  box.innerHTML=[
  '<h2>Sincronización entre PC e iPhone</h2>',
- '<p class="muted">Sincroniza automáticamente guion, perfiles, voces elegidas y modelo. Los audios y la clave de Gemini permanecen solo en cada dispositivo.</p>',
+ '<p class="muted">Sincroniza automáticamente guion, perfiles, voces elegidas, modelo y velocidad de descarga. Los audios y la clave de Gemini permanecen solo en cada dispositivo.</p>',
  '<label>ID del proyecto Firebase</label><input id="cloudProject" placeholder="mi-proyecto" autocomplete="off">',
  '<label>Clave web API de Firebase (NO Gemini)</label><input id="cloudApiKey" placeholder="AIza…" autocomplete="off">',
  '<button class="secondary" style="margin-top:12px" id="cloudSaveConfig">Guardar proyecto</button>',
