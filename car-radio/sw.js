@@ -1,4 +1,4 @@
-const cacheName="car-radio-v5";
+const cacheName="car-radio-v6";
 const files=["./","./index.html","./sync.js?v=2","./speed.js?v=2","./manifest.webmanifest","./icon.svg"];
 self.addEventListener("install",e=>e.waitUntil(caches.open(cacheName).then(c=>c.addAll(files)).then(()=>self.skipWaiting())));
 self.addEventListener("activate",e=>e.waitUntil(caches.keys().then(keys=>Promise.all(keys.filter(k=>k.startsWith("car-radio-")&&k!==cacheName).map(k=>caches.delete(k)))).then(()=>self.clients.claim())));
