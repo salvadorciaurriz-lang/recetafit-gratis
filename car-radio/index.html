@@ -25,7 +25,28 @@ function getKey(){try{return sessionStorage.getItem(PREFIX+"key")||localStorage.
 function status(s){$("status").textContent=s}
 function tab(which){document.querySelectorAll(".view").forEach(e=>e.hidden=e.id!=="tab-"+which);document.querySelectorAll("[data-tab]").forEach(e=>e.classList.toggle("active",e.dataset.tab===which));if(which==="library")refreshLibrary();if(which==="voices")renderProfiles()}
 document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>tab(b.dataset.tab));
-function parse(txt){let seen=[],turns=[];for(let line of txt.split(/\r?\n/)){line=line.trim();let m=line.match(/^(?:[-•]\s+|\*\s+)?(?:\*{1,2}|_{1,2})?([\p{L}\d ._-]{1,32})(?:\*{1,2}|_{1,2})?:\s*(?:\*{1,2}|_{1,2})?\s*(.+)$/u);if(!m)continue;let who=m[1].trim().toLocaleUpperCase("es-ES"),say=m[2].trim();if(!["JULIÁN","NANDO"].includes(who)){if(!turns.length)continue;throw Error("El guion debe contener solo JULIÁN y NANDO.");}if(say.startsWith("Sevillano de unos"))continue;turns.push({speaker:who==="JULIÁN"?"Julian":"Nando",text:say});if(!seen.includes(who))seen.push(who)}if(seen.length!==2)throw Error("Se requieren dos personajes: JULIÁN y NANDO.");return turns}
+function parse(txt){
+  const turns=[],seen=new Set();
+  for(let raw of String(txt||"").split(/\r?\n/)){
+    let line=raw.trim();
+    if(!line)continue;
+    // Permitir viñetas y blockquotes al copiar el guion desde ChatGPT.
+    line=line.replace(/^(?:(?:>\s*)|(?:[-•]\s*)|(?:\*\s+))+/u,"");
+    // En Markdown el formato usual es **JULIÁN:**, con los dos puntos dentro de las negritas.
+    line=line.replace(/^(?:\*{1,2}|_{1,2})\s*(?=JULI[AÁ]N\b|NANDO\b)/iu,"");
+    const m=line.match(/^(JULI[AÁ]N|NANDO)\s*(?:\*{1,2}|_{1,2})?\s*:\s*(?:\*{1,2}|_{1,2})?\s*(.+)$/iu);
+    if(!m)continue; // Encabezados, acotaciones y notas con dos puntos no son personajes.
+    const who=m[1].toLocaleUpperCase("es-ES").replace("JULIAN","JULIÁN");
+    let say=m[2].trim().replace(/(?:\*\*|__)\s*$/u,"").trim();
+    if(!say || /^(?:Sevillano de unos|Hombre sevillano de|Hombre de unos)/iu.test(say))continue;
+    turns.push({speaker:who==="JULIÁN"?"Julian":"Nando",text:say});
+    seen.add(who);
+  }
+  if(seen.size!==2)throw Error(seen.size
+    ?"Falta una voz en el guion. Cada intervención debe empezar por JULIÁN: o NANDO: (con o sin negritas)."
+    :"No he detectado diálogos. Usa JULIÁN: y NANDO: al principio de cada intervención (también admite **JULIÁN:** y **NANDO:**).");
+  return turns;
+}
 function chunks(turns){let arr=[],part=[],count=0;for(let t of turns){let n=t.text.length+42;if(part.length&&count+n>2700){arr.push(part);part=[];count=0}part.push(t);count+=n}if(part.length)arr.push(part);return arr}
 function selected(){return selection.map(id=>profiles.find(p=>p.id===id)||DEFAULT_PROFILES[0])}
 function digest(obj){return crypto.subtle.digest("SHA-256",new TextEncoder().encode(JSON.stringify(obj))).then(b=>[...new Uint8Array(b)].map(v=>v.toString(16).padStart(2,"0")).join(""))}
