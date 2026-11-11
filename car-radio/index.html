@@ -72,4 +72,4 @@ $("saveKey").onclick=()=>{key=$("apiKey").value.trim();if(key.length<20)return a
 $("checkKey").onclick=async()=>{if(!key)return alert("Introduce la clave.");try{let r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",{headers:{"x-goog-api-key":key}});alert(r.ok?"Conexión con Google confirmada.":"Google HTTP "+r.status)}catch(e){alert("No se pudo comprobar la conexión: "+e.message)}};
 async function boot(){VOICES.forEach(v=>$("voiceType").add(new Option(v,v)));$("model").value=model;recalc();renderProfiles();try{db=await connectDB();await refreshLibrary();status(key?"Clave de Google detectada. Ya puedes generar el primer fragmento.":"Abre Ajustes para conectar Google Gemini.")}catch(e){status("Almacenamiento no disponible: "+e.message)}if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{})}
 boot();
-</script><script src="./speed.js?v=1"></script><script src="./sync.js?v=1"></script></body></html>
+</script><script src="./speed.js?v=2"></script><script src="./sync.js?v=2"></script></body></html>
