@@ -5,7 +5,24 @@
   const audio = $("audio"), rateSelect = $("exportSpeed");
   const downloadButton = $("download"), shareButton = $("share");
   const hint = $("speedStatus");
+  const readyWrap = $("speedReadyWrap"), readyLink = $("speedReadyLink");
+  let preparedUrl = null;
   let busy = false;
+
+  function invalidatePrepared() {
+    readyWrap.classList.add("hidden");
+    readyLink.removeAttribute("href");
+    if (preparedUrl) URL.revokeObjectURL(preparedUrl);
+    preparedUrl = null;
+  }
+
+  function offerPreparedFile(result, name) {
+    invalidatePrepared();
+    preparedUrl = URL.createObjectURL(new Blob([result], { type: "audio/wav" }));
+    readyLink.href = preparedUrl;
+    readyLink.download = name;
+    readyWrap.classList.remove("hidden");
+  }
   const exactRate = x => RATE_OPTIONS.find(v => Math.abs(v - Number(x)) < 0.0001) ?? 1;
   const prettyRate = n => String(n).replace(".", ",") + "x";
   const yieldToUI = () => new Promise(resolve => setTimeout(resolve, 0));
@@ -13,6 +30,7 @@
   function setRate(value, persist = true) {
     const rate = exactRate(value);
     rateSelect.value = String(rate);
+    if (persist) invalidatePrepared();
     audio.defaultPlaybackRate = rate;
     audio.playbackRate = rate;
     if ("preservesPitch" in audio) audio.preservesPitch = true;
@@ -109,10 +127,12 @@
         hint.textContent = "Preparando WAV a " + prettyRate(rate) + " (" + pct + " %)…";
       });
       const name = "CAR_Radio_" + String(rate).replace(".", "-") + "x.wav";
+      offerPreparedFile(result, name);
       if (mode === "share" && navigator.share && navigator.canShare && typeof File !== "undefined") {
         const file = new File([result], name, { type: "audio/wav" });
         if (navigator.canShare({ files: [file] })) {
-          await navigator.share({ files: [file], title: "CAR Radio · " + prettyRate(rate) });
+          try { await navigator.share({ files: [file], title: "CAR Radio · " + prettyRate(rate) }); }
+          catch (e) { if (e.name !== "AbortError") hint.textContent = "Usa el enlace «Guardar WAV preparado» para guardar el archivo en Safari."; return; }
         } else download(result, name, "audio/wav");
       } else download(result, name, "audio/wav");
       hint.textContent = "Archivo listo a " + prettyRate(rate) + ". Puedes elegir otra velocidad sin regenerar el audio con Gemini.";
@@ -130,7 +150,7 @@
   }
 
   rateSelect.onchange = () => setRate(rateSelect.value);
-  audio.addEventListener("loadedmetadata", () => setRate(rateSelect.value, false));
+  audio.addEventListener("loadedmetadata", () => { invalidatePrepared(); setRate(rateSelect.value, false); });
   downloadButton.onclick = () => exportAtSelectedSpeed("download");
   shareButton.onclick = () => exportAtSelectedSpeed("share");
   setRate(load("speed", 1), false);
