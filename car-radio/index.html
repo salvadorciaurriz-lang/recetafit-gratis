@@ -20,7 +20,7 @@ const DEFAULT_PROFILES=[
 const $=id=>document.getElementById(id);
 let profiles=load("profiles",DEFAULT_PROFILES),selection=load("selection",["julian","nando"]),model=load("model","gemini-3.8-flash-tts"),scriptText=load("script",DEFAULT_SCRIPT),key=getKey(),db=null,stopNow=false,running=false,current=null;
 function load(k,f){try{let s=localStorage.getItem(PREFIX+k);return s===null?f:JSON.parse(s)}catch{return f}}
-function save(k,v){localStorage.setItem(PREFIX+k,JSON.stringify(v))}
+function save(k,v){localStorage.setItem(PREFIX+k,JSON.stringify(v));if(window.CARRadioSync?.changed)window.CARRadioSync.changed(k)}
 function getKey(){try{return sessionStorage.getItem(PREFIX+"key")||localStorage.getItem(PREFIX+"key")||localStorage.getItem("recetafit_gemini_key_device_v1")||sessionStorage.getItem("recetafit_gemini_free_key")||""}catch{return ""}}
 function status(s){$("status").textContent=s}
 function tab(which){document.querySelectorAll(".view").forEach(e=>e.hidden=e.id!=="tab-"+which);document.querySelectorAll("[data-tab]").forEach(e=>e.classList.toggle("active",e.dataset.tab===which));if(which==="library")refreshLibrary();if(which==="voices")renderProfiles()}
@@ -72,4 +72,4 @@ $("saveKey").onclick=()=>{key=$("apiKey").value.trim();if(key.length<20)return a
 $("checkKey").onclick=async()=>{if(!key)return alert("Introduce la clave.");try{let r=await fetch("https://generativelanguage.googleapis.com/v1beta/models?pageSize=1",{headers:{"x-goog-api-key":key}});alert(r.ok?"Conexión con Google confirmada.":"Google HTTP "+r.status)}catch(e){alert("No se pudo comprobar la conexión: "+e.message)}};
 async function boot(){VOICES.forEach(v=>$("voiceType").add(new Option(v,v)));$("model").value=model;recalc();renderProfiles();try{db=await connectDB();await refreshLibrary();status(key?"Clave de Google detectada. Ya puedes generar el primer fragmento.":"Abre Ajustes para conectar Google Gemini.")}catch(e){status("Almacenamiento no disponible: "+e.message)}if("serviceWorker" in navigator&&location.protocol==="https:")navigator.serviceWorker.register("./sw.js").catch(()=>{})}
 boot();
-</script></body></html>
+</script><script src="./sync.js?v=1"></script></body></html>
