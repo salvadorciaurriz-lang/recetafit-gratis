@@ -43,7 +43,7 @@ service cloud.firestore {
 
 ## Qué se sincroniza
 
-- Guion, perfiles de locutores (incluidas instrucciones), voces seleccionadas y modelo TTS.
+- Guion, perfiles de locutores (incluidas instrucciones), voces seleccionadas modelo TTS y velocidad de exportación.
 - Cada edición se sube automáticamente con un retardo corto para evitar una petición por tecla.
 - Las actualizaciones se comprueban al recuperar el foco y cada 30 segundos con la app abierta.
 - Antes de sustituir el contenido local, se deja una copia en `localStorage` con clave `car_radio_gh_v1_cloud_backup_before_restore`.
@@ -64,3 +64,9 @@ Firebase Spark tiene cuotas gratuitas para Firestore y Authentication por correo
 - **Usar este dispositivo**: sobrescribir el documento remoto con la configuración local, comprobando el control de versión del documento.
 
 No introduzcas credenciales de Gemini ni contraseñas de Firebase en el repositorio GitHub. Firebase `apiKey` es una configuración pública de la aplicación web y no sustituye la autenticación ni las reglas de seguridad.
+
+## Descarga a varias velocidades
+
+En **Estudio → Audio resultante**, elige 0,85x, 1x, 1,10x, 1,20x, 1,25x, 1,35x, 1,50x, 1,75x o 2x. La escucha previa adapta la velocidad del reproductor y el botón **Descargar WAV** produce un archivo nuevo con la velocidad seleccionada. La conversión se realiza en el dispositivo mediante WSOLA para conservar aproximadamente el tono original de las voces, sin llamar de nuevo a Gemini.
+
+En Safari, si la descarga automática se bloquea, utiliza **Guardar el WAV preparado (iPhone / Safari)**. La velocidad seleccionada también se guarda en este navegador y se sincroniza entre dispositivos si Firebase está configurado.
