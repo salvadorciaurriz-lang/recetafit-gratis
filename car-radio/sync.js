@@ -182,7 +182,12 @@ function initUI(){
 }
 initUI();
 if(auth&&cfg.projectId&&cfg.apiKey)initialize().catch(error);
-setInterval(()=>poll().catch(error),30000);
-window.addEventListener("focus",()=>poll().catch(error));
-document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")poll().catch(error)});
+function refreshConnection(){
+ if(!auth || document.visibilityState==="hidden")return;
+ if(ready)return poll().catch(error);
+ if(!busy&&!conflict)return initialize().catch(error);
+}
+setInterval(refreshConnection,30000);
+window.addEventListener("focus",refreshConnection);
+document.addEventListener("visibilitychange",()=>{if(document.visibilityState==="visible")refreshConnection()});
 })();
