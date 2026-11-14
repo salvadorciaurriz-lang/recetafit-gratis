@@ -1,4 +1,4 @@
-const CACHE_NAME='car-performance-published-v1.2.0';
+const CACHE_NAME='car-performance-published-v1.3.0';
 const APP=['./','./index.html','./manifest.webmanifest','./car-escudo-oficial.png'];
 self.addEventListener('install',e=>e.waitUntil(caches.open(CACHE_NAME).then(c=>c.addAll(APP)).then(()=>self.skipWaiting())));
 self.addEventListener('activate',e=>e.waitUntil(caches.keys().then(names=>Promise.all(names.filter(n=>n.startsWith('car-performance-published-')&&n!==CACHE_NAME).map(n=>caches.delete(n)))).then(()=>self.clients.claim())));
