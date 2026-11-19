@@ -70,3 +70,25 @@ Esta integración permite elegir **Gemini** o **ElevenLabs** para Julián y Nand
 - [API Text to Speech](https://elevenlabs.io/docs/api-reference/text-to-speech/convert)
 - [Autenticación de ElevenLabs](https://elevenlabs.io/docs/api-reference/authentication)
 - [Cloudflare Worker secrets](https://developers.cloudflare.com/workers/configuration/secrets/)
+
+---
+
+## Alternativa Supabase (recomendada si has conectado Supabase a ChatGPT)
+
+La aplicación admite **Supabase Edge Functions**, además del Worker de Cloudflare descrito arriba.
+
+1. Crea o elige un proyecto Supabase en la región europea y en el plan Free. Confirma antes cualquier coste indicado.
+2. Despliega **`supabase/functions/car-radio-elevenlabs/index.ts`** como Edge Function `car-radio-elevenlabs`, con verificación JWT desactivada (`verify_jwt = false`) porque el código verifica obligatoriamente el token privado de Radio CAR. El despliegue se puede hacer desde el conector Supabase, sin instalar herramientas.
+3. En [Supabase Dashboard](https://supabase.com/dashboard) → tu proyecto → **Edge Functions → Secrets**, crea:
+   - `ELEVENLABS_API_KEY`: tu clave privada de ElevenLabs.
+   - `CAR_RADIO_ACCESS_TOKEN`: código fuerte generado con el botón **Generar código seguro** dentro de Radio CAR. El código debe tener al menos 16 caracteres; el generador crea 48 caracteres hexadecimales.
+4. En Radio CAR → Ajustes → ElevenLabs, introduce la URL completa que tendrá esta forma:
+   `https://<project-ref>.supabase.co/functions/v1/car-radio-elevenlabs`.
+   Pega el mismo `CAR_RADIO_ACCESS_TOKEN` y guarda la conexión.
+5. Pulsa **Comprobar conexión**. Después **Cargar mis voces**, asigna Julián y Nando y prueba el primer fragmento.
+
+El servidor **no funciona sin ambos secretos**: responde HTTP 503. No publiques las claves API en GitHub, tampoco dentro de una URL ni de un mensaje de chat.
+
+Consulta la documentación oficial sobre [secretos de Supabase Edge Functions](https://supabase.com/docs/guides/functions/secrets).
+
+**Importante:** una clave de acceso guardada en el navegador sirve para uso personal; si la aplicación se comparte públicamente, conviene añadir autenticación real de usuarios y control de cuotas por usuario en el servidor.
