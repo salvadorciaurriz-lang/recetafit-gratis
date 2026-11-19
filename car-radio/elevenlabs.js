@@ -243,6 +243,13 @@ function applyRemote(opts){
 function testCount(){return engine==="elevenlabs"&&!DIALOGUE.has(elevenModel)?2:1}
 el("engine").onchange=()=>changeEngine(el("engine").value);
 el("elevenModel").onchange=()=>setModel(el("elevenModel").value);
+el("elevenGenerateToken").onclick=async()=>{
+ const bytes=crypto.getRandomValues(new Uint8Array(24));
+ const newToken=Array.from(bytes,x=>x.toString(16).padStart(2,"0")).join("");
+ el("elevenToken").value=newToken;
+ label("Código generado. Cópialo y añádelo como secreto CAR_RADIO_ACCESS_TOKEN en Cloudflare; después pulsa Guardar conexión.");
+ try{await navigator.clipboard.writeText(newToken);label("Código copiado. Añádelo como secreto CAR_RADIO_ACCESS_TOKEN en Cloudflare y pulsa Guardar conexión.")}catch{}
+};
 el("elevenSave").onclick=savedConnection;
 el("elevenTest").onclick=()=>check();
 el("elevenVoices").onclick=()=>loadVoices();
