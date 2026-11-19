@@ -8,7 +8,7 @@ const MAX_CHARS=1800;
 const el=id=>document.getElementById(id);
 let engine=load("engine","gemini")==="elevenlabs"?"elevenlabs":"gemini";
 let elevenModel=MODELS.has(load("elevenModel","eleven_v3"))?load("elevenModel","eleven_v3"):"eleven_v3";
-let workerUrl=load("elevenWorkerUrl","");
+let workerUrl=load("elevenWorkerUrl","https://wcffjsbboazdhupobscu.supabase.co/functions/v1/car-radio-elevenlabs");
 let token="";
 try{token=sessionStorage.getItem(PREFIX_KEY)||localStorage.getItem(PREFIX_KEY)||""}catch{}
 const label=(message)=>{el("elevenStatus").textContent=message};
