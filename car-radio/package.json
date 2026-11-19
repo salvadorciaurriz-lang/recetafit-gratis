@@ -1,0 +1,13 @@
+{
+  "name": "car-radio-elevenlabs-bridge",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "scripts": {
+    "deploy:elevenlabs": "wrangler deploy --config wrangler.toml",
+    "elevenlabs:onboard": "npx -y @elevenlabs/cli@latest onboard init"
+  },
+  "devDependencies": {
+    "wrangler": "^4.0.0"
+  }
+}
