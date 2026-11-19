@@ -45,9 +45,9 @@ const proxy = {
       return json({ error: "Código de acceso de Radio CAR no válido." }, 401, origin);
     const upstreamHeaders = { "xi-api-key": env.ELEVENLABS_API_KEY };
     try {
-      if (request.method === "GET" && url.pathname === "/health")
+      if (request.method === "GET" && url.pathname.endsWith("/health"))
         return json({ ok: true, service: "CAR Radio ElevenLabs" }, 200, origin);
-      if (request.method === "GET" && url.pathname === "/voices") {
+      if (request.method === "GET" && url.pathname.endsWith("/voices")) {
         const upstream = await fetch("https://api.elevenlabs.io/v2/voices?page_size=100", { headers: upstreamHeaders });
         if (!upstream.ok) return await upstreamError(upstream, origin);
         const data = await upstream.json();
@@ -56,7 +56,7 @@ const proxy = {
           .map(v => ({ id: v.voice_id, name: String(v.name || "Voz sin nombre").slice(0, 100) })) : [];
         return json({ voices, hasMore: !!data.has_more }, 200, origin);
       }
-      if (request.method === "POST" && url.pathname === "/speak") {
+      if (request.method === "POST" && url.pathname.endsWith("/speak")) {
         const size = Number(request.headers.get("Content-Length") || 0);
         if (size > 28000) return json({ error: "Petición demasiado grande." }, 413, origin);
         let params;
