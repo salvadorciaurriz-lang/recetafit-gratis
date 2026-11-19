@@ -16,7 +16,8 @@ function goodUrl(input){
  try{
   const url=new URL(String(input||"").trim());
   if(url.protocol!=="https:"||url.username||url.password||url.search||url.hash||!url.hostname) return "";
-  return url.origin;
+  // Conservar la ruta completa para admitir Supabase Edge Functions y Cloudflare Workers.
+  return url.origin + url.pathname.replace(/\/+$/, "");
  }catch{return ""}
 }
 function fillProvider(){
