@@ -1,0 +1,5 @@
+# Deploy from car-radio/ with Supabase CLI or MCP.
+# The Edge Function verifies its own private X-Car-Radio-Token.
+# Without either secret, it fails closed with HTTP 503.
+[functions.car-radio-elevenlabs]
+verify_jwt = false
