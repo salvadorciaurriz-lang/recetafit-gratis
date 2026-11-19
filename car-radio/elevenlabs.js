@@ -44,7 +44,7 @@ function changeEngine(value,persist=true){
  el("engine").value=engine;
  el("elevenStudio").hidden=engine!=="elevenlabs";
  el("geminiModelWrap").hidden=engine!=="gemini";
- clearAudio();
+ renderProfiles();clearAudio();
  recalc();
  refreshLibrary().catch(e=>label("No se pudo actualizar la lista: "+e.message));
  updateEstimate();
@@ -91,7 +91,7 @@ function partsFor(model,inputs){
  for(const t of inputs){
   const limit=out.length===0?450:MAX_CHARS;
   const reachFirstTwo=out.length===0&&new Set(block.map(x=>x.speaker)).size<2;
-  if(block.length&&count+t.text.length>limit&&!reachFirstTwo){
+  if(block.length&&(count+t.text.length>MAX_CHARS||(count+t.text.length>limit&&!reachFirstTwo))){
    out.push(block);block=[];count=0;
   }
   if(t.text.length>MAX_CHARS)throw Error("La intervención supera el límite seguro de ElevenLabs.");
@@ -237,7 +237,7 @@ function applyRemote(opts){
  if(typeof opts.elevenWorkerUrl==="string"){workerUrl=goodUrl(opts.elevenWorkerUrl);el("elevenWorker").value=workerUrl}
  el("elevenStudio").hidden=engine!=="elevenlabs";
  el("geminiModelWrap").hidden=engine!=="gemini";
- updateEstimate();
+ renderProfiles();updateEstimate();
  recalc();refreshLibrary().catch(()=>{});
 }
 function testCount(){return engine==="elevenlabs"&&!DIALOGUE.has(elevenModel)?2:1}
