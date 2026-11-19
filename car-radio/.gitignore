@@ -1,0 +1,9 @@
+# Nunca publicar claves privadas ni archivos locales de autenticación
+.env
+.env.*
+!.env.example
+.dev.vars
+.dev.vars.*
+.wrangler/
+node_modules/
+*.log
