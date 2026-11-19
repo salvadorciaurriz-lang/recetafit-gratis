@@ -1,0 +1,9 @@
+name = "car-radio-eleven"
+main = "./elevenlabs-worker.js"
+compatibility_date = "2026-11-19"
+workers_dev = true
+
+# No incluyas aquí la clave de ElevenLabs ni el código privado.
+# Secretos del Worker:
+# ELEVENLABS_API_KEY
+# CAR_RADIO_ACCESS_TOKEN
